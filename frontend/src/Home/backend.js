@@ -10,6 +10,9 @@ export const trainModel = async (file) => {
     // return response.data;
 };
 
+
+
+
 // export const generateModel = async (file) => {
 //     const response = await axios.post('http://localhost:5000/generate', { file });
 //     return response.data;

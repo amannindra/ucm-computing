@@ -93,7 +93,6 @@ def main() -> None:
     else:
         print(f"Using device: {device}")
         
-    print(f"Using device: {device}")
     if device.type == "cuda":
         print(f"GPU: {torch.cuda.get_device_name(0)}")
         torch.backends.cudnn.benchmark = True

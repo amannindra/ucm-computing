@@ -1,0 +1,12 @@
+{
+  "epochs": 10,
+  "learning_rate": 0.001,
+  "batch_size": 128,
+  "num_workers": 2,
+  "pin_memory": true,
+  "device": "cuda",
+  "model_name": "model.pth",
+  "model_description": "model description",
+  "dependencies": "dependencies",
+  "pytorch_version": "pytorch version"
+}
