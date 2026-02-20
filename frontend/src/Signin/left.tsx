@@ -1,83 +1,100 @@
 import { useState } from "react";
 import SigninRight from "./right";
-export default function Signin() {
+import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+
+export default function SigninLeft() {
   const [email, setEmail] = useState("");
+
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    console.log("in handleSubmit");
+    navigate("/main");
   };
-
   return (
-    <div className="flex w-full h-full">
-      <div className="h-screen w-1/2 bg-gray-200 flex items-center justify-center">
-        <div className="bg-gray-200 rounded-2xl shadow-lg p-30">
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold text-gray-800 tracking-tight">
-              UCM Computing
-            </h1>
-            <p className="text-gray-500 mt-2 text-sm">
-              Sign in to your account
-            </p>
+    <>
+      <div className="h-screen flex items-center justify-center">
+        {" "}
+        <div className="flex w-[80%] flex-col p-10 mb-10">
+          <div className="flex sm:mx-auto sm:w-full sm:max-w-sm ">
+            <h2 className="text-center text-2xl/9 font-bold tracking-tight text-white">
+              Welcome to UCM Computing
+            </h2>
           </div>
+          <div className="mt-5 sm:mx-auto sm:w-full sm:max-w-sm">
+            <form onSubmit={handleSubmit} method="POST" className="space-y-6">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm/6 font-medium text-gray-100"
+                >
+                  Email address
+                </label>
+                <div className="mt-2">
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    // required
+                    // autoComplete="email"
+                    className="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
+                  />
+                </div>
+              </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            <div className="flex flex-col gap-1">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium text-gray-600"
+              <div>
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="password"
+                    className="block text-sm/6 font-medium text-gray-100"
+                  >
+                    Password
+                  </label>
+                  <div className="text-sm">
+                    <a
+                      href="#"
+                      className="font-semibold text-indigo-400 hover:text-indigo-300"
+                    >
+                      Forgot password?
+                    </a>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    // required
+                    // autoComplete="current-password"
+                    className="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <button
+                  type="submit"
+                  className="flex w-full justify-center rounded-md bg-indigo-500 px-3 py-1.5 text-sm/6 font-semibold text-white hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                >
+                  Sign in
+                </button>
+              </div>
+            </form>
+            {/* 
+            <p className="mt-10 text-center text-sm/6 text-gray-400">
+              Not a member?{" "}
+              <a
+                href="#"
+                className="font-semibold text-indigo-400 hover:text-indigo-300"
               >
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 transition"
-              />
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label
-                htmlFor="password"
-                className="text-sm font-medium text-gray-600"
-              >
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-gray-50 border border-gray-300 rounded-lg px-4 py-2.5 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 transition"
-              />
-            </div>
-
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="accent-gray-500" />
-                Remember me
-              </label>
-              <a href="#" className="hover:text-gray-700 transition">
-                Forgot password?
+                Start a 14 day free trial
               </a>
-            </div>
-
-            <button
-              type="submit"
-              className="mt-2 bg-gray-700 hover:bg-gray-800 text-white font-semibold py-2.5 rounded-lg transition"
-            >
-              Sign In
-            </button>
-          </form>
+            </p> */}
+          </div>
         </div>
       </div>
-      <SigninRight />
-    </div>
+    </>
   );
 }
