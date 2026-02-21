@@ -3,6 +3,7 @@ import Panel from "./panel";
 import TrainModel from "./trainModel";
 import { useState } from "react";
 import Default from "./default";
+import Storage from "./storage";
 
 export default function MainHome() {
   const [activeTab, setActiveTab] = useState("trainModel");
@@ -18,7 +19,7 @@ export default function MainHome() {
           <Panel onTabChange={handleTabChange} />
         </div>
         <div className="col-span-10">
-          {activeTab === "trainModel" ? <TrainModel /> : <Default />}
+          {activeTab === "trainModel" ? <TrainModel /> : activeTab === "storage" ? <Storage /> : <Default />}
         </div>
       </div>
     </div>

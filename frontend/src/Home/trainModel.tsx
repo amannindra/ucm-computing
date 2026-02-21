@@ -1,14 +1,16 @@
-import { trainModel } from "./backend.js";
+import { trainModel, validateJson } from "./backend.js";
 import data from "./data.json";
 import Form from "@rjsf/core";
 import validator from "@rjsf/validator-ajv8";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import loader from "@monaco-editor/loader";
-
 import Editor from "@monaco-editor/react";
 
 export default function TrainModel() {
+  const editorRef = useRef(null);
+  const [validatedJson, setValidatedJson] = useState(false);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     console.log(file);
@@ -28,32 +30,40 @@ export default function TrainModel() {
       },
     },
   };
-  const editorRef = useRef(null);
 
-  loader.init().then((monaco) => {
-    const wrapper = document.getElementById("root");
-    wrapper.style.height = "100vh";
-    const properties = {
-      value: 'function hello() {\n\talert("Hello world!");\n}',
-      language: "javascript",
-    };
+  const handleValidateJson = async () => {
+    console.log("validate json");
+    const val = await validateJson(JSON.parse(editorRef.current.getValue()));
+    if (val) {
+      console.log("Json is valid");
+      setValidatedJson(true);
+    } else {
+      console.log("Json is invalid");
+      setValidatedJson(false);
+      // alert("Json is invalid");
+    }
+  };
+  const handleTrainModel = async () => {
+    console.log("train model");
+    const response = await trainModel(JSON.parse(editorRef.current.getValue()));
+    console.log(response);
+  };
 
-    // monaco.editor.create(wrapper, properties);
-  });
+  function handleEditorWillMount(monaco: any) {
+    // Define a custom theme that uses your #242424 background
+    monaco.editor.defineTheme("customDarkTheme", {
+      base: "vs-dark", // Inherit standard dark mode colors
+      inherit: true,
+      rules: [],
+      colors: {
+        "editor.background": "#242424", // Your custom background
+      },
+    });
+  }
 
   function handleEditorDidMount(editor, monaco) {
     editorRef.current = editor;
   }
-  // loader.init().then((monaco) => {
-  //   const wrapper = document.getElementById("root");
-  //   wrapper.style.height = "100vh";
-  //   const properties = {
-  //     value: 'function hello() {\n\talert("Hello world!");\n}',
-  //     language: "javascript",
-  //   };
-
-  //   monaco.editor.create(wrapper, properties);
-  // });
 
   return (
     <div className="flex flex-col h-full w-full  border-l-2 border-r-2 border-gray-200">
@@ -96,57 +106,57 @@ export default function TrainModel() {
               />
             </label>
             <div className="flex mt-10">
-              <h1 className="text-2xl font-bold">Train Model Configuration</h1>
+              <h1 className="text-3xl font-bold">Train Model Configuration</h1>
             </div>
-            <div className="flex mt-10 flex-col max-w-md">
-              <div className="relative">
-                <input
-                  type="text"
-                  id="model_name"
-                  className="block px-2.5 pb-2.5 pt-4 w-full text-sm text-heading bg-transparent rounded-base border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-brand peer"
-                  placeholder=" " /* <-- CRITICAL: This space placeholder makes the floating label work */
+            <div className="">
+              <h2 className="text-2xl font-bold mt-4">Documentations</h2>
+              <p className="text-sm text-gray-300 mt-2">
+                In order to train the model, you need to provide the following
+                information:
+              </p>
+            </div>
+            <div className="flex flex-col ">
+              <div className="mt-8 border border-gray-600 rounded-md overflow-hidden">
+                <Editor
+                  height="400px"
+                  language="json"
+                  theme="customDarkTheme"
+                  value={JSON.stringify(data, null, 2)}
+                  beforeMount={handleEditorWillMount}
+                  onMount={handleEditorDidMount}
+                  options={{
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    padding: { top: 16, bottom: 16 },
+                    scrollbar: {
+                      vertical: "auto",
+                      horizontal: "auto",
+                    },
+                    // Add these to make the text bigger:
+                    fontSize: 18, // Increase font size (default is usually 12-14)
+                    lineHeight: 28, // Optional: Increase line height for better readability
+                    fontWeight: "500", // Optional: Make the font slightly bolder ("normal", "bold", etc.)
+                  }}
                 />
-                <label
-                  htmlFor="model_name"
-                  className="absolute text-sm text-body duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-[#242424] px-2 peer-focus:px-2 peer-focus:text-brand peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 start-1 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto"
-                >
-                  Model Name
-                </label>
               </div>
-              <div className="relative mt-4">
-                <input
-                  type="text"
-                  id="dependencies"
-                  className="block px-2.5 pb-2.5 pt-4 w-full text-sm text-heading bg-transparent rounded-base border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-brand peer"
-                  placeholder=" " /* <-- CRITICAL: This space placeholder makes the floating label work */
-                />
-                <label
-                  htmlFor="dependencies"
-                  className="absolute text-sm text-body duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-[#242424] px-2 peer-focus:px-2 peer-focus:text-brand peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 start-1 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto"
+              <div className="flex flex-col">
+                <button
+                  className=" mt-4 border-2 border-white text-white px-4 py-2 rounded-md hover:bg-gray-200 hover:text-black"
+                  onClick={() => handleValidateJson()}
                 >
-                  Dependencies
-                </label>
-              </div>
-              <div className="relative mt-4">
-                <input
-                  type="text"
-                  id="pytorch_version"
-                  className="block px-2.5 pb-2.5 pt-4 w-full text-sm text-heading bg-transparent rounded-base border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-brand peer"
-                  placeholder=" " /* <-- CRITICAL: This space placeholder makes the floating label work */
-                />
-                <label
-                  htmlFor="pytorch_version"
-                  className="absolute text-sm text-body duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-[#242424] px-2 peer-focus:px-2 peer-focus:text-brand peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 start-1 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto"
+                  Validate Json
+                </button>
+                {validatedJson && (
+                  <div className="text-green-500">Json is valid</div>
+                )}
+                {!validatedJson && <div className="text-red-500"></div>}
+                <button
+                  className=" mt-2 border-2 border-white text-white px-4 py-2 rounded-md hover:bg-gray-200 hover:text-black"
+                  onClick={() => handleTrainModel()}
                 >
-                  Pytorch Version
-                </label>
+                  Train Model
+                </button>
               </div>
-              <Editor
-                height="30vh"
-                defaultLanguage="json"
-                defaultValue={JSON.stringify(data)}
-                onMount={handleEditorDidMount}
-              />
             </div>
           </div>
         </div>
@@ -154,3 +164,46 @@ export default function TrainModel() {
     </div>
   );
 }
+
+//  <div className="relative">
+//                 <input
+//                   type="text"
+//                   id="model_name"
+//                   className="block px-2.5 pb-2.5 pt-4 w-full text-sm text-heading bg-transparent rounded-base border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-brand peer"
+//                   placeholder=" " /* <-- CRITICAL: This space placeholder makes the floating label work */
+//                 />
+//                 <label
+//                   htmlFor="model_name"
+//                   className="absolute text-sm text-body duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-[#242424] px-2 peer-focus:px-2 peer-focus:text-brand peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 start-1 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto"
+//                 >
+//                   Model Name
+//                 </label>
+//               </div>
+//               <div className="relative mt-4">
+//                 <input
+//                   type="text"
+//                   id="dependencies"
+//                   className="block px-2.5 pb-2.5 pt-4 w-full text-sm text-heading bg-transparent rounded-base border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-brand peer"
+//                   placeholder=" " /* <-- CRITICAL: This space placeholder makes the floating label work */
+//                 />
+//                 <label
+//                   htmlFor="dependencies"
+//                   className="absolute text-sm text-body duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-[#242424] px-2 peer-focus:px-2 peer-focus:text-brand peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 start-1 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto"
+//                 >
+//                   Dependencies
+//                 </label>
+//               </div>
+//               <div className="relative mt-4">
+//                 <input
+//                   type="text"
+//                   id="pytorch_version"
+//                   className="block px-2.5 pb-2.5 pt-4 w-full text-sm text-heading bg-transparent rounded-base border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-brand peer"
+//                   placeholder=" " /* <-- CRITICAL: This space placeholder makes the floating label work */
+//                 />
+//                 <label
+//                   htmlFor="pytorch_version"
+//                   className="absolute text-sm text-body duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-[#242424] px-2 peer-focus:px-2 peer-focus:text-brand peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:scale-75 peer-focus:-translate-y-4 start-1 rtl:peer-focus:translate-x-1/4 rtl:peer-focus:left-auto"
+//                 >
+//                   Pytorch Version
+//                 </label>
+//               </div>
