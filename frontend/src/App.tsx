@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Signin from "./Signin/SignIn";
+import Signin from "./Signin/base";
 import MainHome from "./Home/mainHome";
 
 export default function App() {
@@ -9,7 +9,6 @@ export default function App() {
         <Route path="/" element={<Signin />} />
         <Route path="/signin" element={<Signin />} />
         <Route path="/home" element={<MainHome />} />
-  
       </Routes>
     </BrowserRouter>
   );

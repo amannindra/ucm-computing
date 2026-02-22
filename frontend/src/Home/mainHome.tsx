@@ -14,12 +14,18 @@ export default function MainHome() {
   console.log("mainHome");
   return (
     <div className="flex w-full h-full">
-      <div className="h-screen w-full grid grid-cols-12">
-        <div className="col-span-2 justify-center">
+      <div className="h-screen w-full grid grid-cols-12 overflow-hidden">
+        <div className="col-span-2 justify-center overflow-hidden h-screen">
           <Panel onTabChange={handleTabChange} />
         </div>
-        <div className="col-span-10">
-          {activeTab === "trainModel" ? <TrainModel /> : activeTab === "storage" ? <Storage /> : <Default />}
+        <div className="col-span-10 h-screen overflow-y-auto">
+          {activeTab === "trainModel" ? (
+            <TrainModel />
+          ) : activeTab === "storage" ? (
+            <Storage />
+          ) : (
+            <Default />
+          )}
         </div>
       </div>
     </div>

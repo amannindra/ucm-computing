@@ -1,19 +1,30 @@
 import { useState } from "react";
 import SigninRight from "./right";
 import { Link } from "react-router-dom";
-import SigninLeft from "./left";
+import SigninLeft from "./SignInleft";
+import CreateAccountLeft from "./createAccountleft";
 
 export default function Signin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const setSplit = 30;
+  const [createPassword, setCreatePassword] = useState(false);
 
   return (
     <div className="flex w-full h-full">
       <div className="h-screen w-full grid grid-cols-12">
         <div className="col-span-3 justify-center">
-          <SigninLeft />
+          {createPassword ? (
+            <CreateAccountLeft
+              createPassword={createPassword}
+              setCreatePassword={setCreatePassword}
+            />
+          ) : (
+            <SigninLeft
+              createPassword={createPassword}
+              setCreatePassword={setCreatePassword}
+            />
+          )}
         </div>{" "}
         {/* ~33% */}
         <div className="col-span-9">

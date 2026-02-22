@@ -1,17 +1,35 @@
 import { useState } from "react";
-import SigninRight from "./right";
 import { useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
+import { signIn } from "./backend.js";
 
-export default function SigninLeft() {
+export default function SigninLeft({
+  setCreatePassword,
+}: {
+  createPassword: boolean;
+  setCreatePassword: (createPassword: boolean) => void;
+}) {
   const [email, setEmail] = useState("");
-
+  const [error, setError] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    console.log("in handleSubmit");
-    navigate("/home");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!email || !password) {
+      setError("Email and password are required.");
+      return;
+    }
+    const res = await signIn(email, password);
+    if (res?.success) {
+      navigate("/home");
+    } else {
+      setError(res?.message || "Something went wrong.");
+    }
+  };
+  const handleCreateAccount = () => {
+    console.log("in handleCreateAccount");
+    setCreatePassword(true);
   };
   return (
     <>
@@ -37,8 +55,10 @@ export default function SigninLeft() {
                     id="email"
                     name="email"
                     type="email"
-                    // required
-                    // autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="email"
                     className="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
                   />
                 </div>
@@ -56,8 +76,9 @@ export default function SigninLeft() {
                     <a
                       href="#"
                       className="font-semibold text-indigo-400 hover:text-indigo-300"
+                      onClick={handleCreateAccount}
                     >
-                      Forgot password?
+                      Create Account
                     </a>
                   </div>
                 </div>
@@ -66,12 +87,18 @@ export default function SigninLeft() {
                     id="password"
                     name="password"
                     type="password"
-                    // required
-                    // autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
                     className="block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
                   />
                 </div>
               </div>
+
+              {error && (
+                <p className="text-sm text-red-400">{error}</p>
+              )}
 
               <div>
                 <button

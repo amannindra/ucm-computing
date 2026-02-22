@@ -1,7 +1,5 @@
 import { validateJson, sendPythonFile, sendJson } from "./backend.js";
 import data from "./data.json";
-import Form from "@rjsf/core";
-import validator from "@rjsf/validator-ajv8";
 import { useRef, useState } from "react";
 
 import loader from "@monaco-editor/loader";
@@ -13,6 +11,8 @@ export default function TrainModel() {
   const [reasonVisible, setReasonVisible] = useState<string>("Json is valid");
   const [file_names, setFileNames] = useState<string[]>([]);
   const [python_file, setPythonFile] = useState<File[]>([]);
+  const [pythonVisible, setpythonVisible] = useState<string>("No Python Files");
+  const [validatedPython, setValidatedPython] = useState<boolean>(false);
 
   const validateJsonSimple = () => {
     console.log("validateJsonSimple");
@@ -29,7 +29,7 @@ export default function TrainModel() {
       setValidatedJson(false);
       return false;
     } else {
-      setValidatedJson(true);
+      setValidatedJson(true); //localhost:5173/home
       setReasonVisible("Json is valid");
       return true;
     }
@@ -41,7 +41,7 @@ export default function TrainModel() {
     const { val, reason } = validateJson(value);
     if (val) {
       setValidatedJson(true);
-      setReasonVisible("JSON is valid");
+      setReasonVisible("Json is valid");
     } else {
       setValidatedJson(false);
       setReasonVisible(reason);
@@ -63,16 +63,24 @@ export default function TrainModel() {
   //   validateJsonSimple();
   // };
 
-
-
   const handleUploadPythonFile = async () => {
+    if (python_file.length === 0) {
+      // console.log("No Python files selected");
+      setpythonVisible("Python files not uploaded");
+      setValidatedPython(false);
+      return;
+    }
 
-    
     const response = await sendPythonFile(python_file);
     if (response.error) {
       console.log("Error uploading Python file");
+      setpythonVisible("Error uploading Python file");
+      setValidatedPython(false);
       return;
     }
+    setPythonFile([]);
+    setValidatedPython(true);
+    setpythonVisible("Python file uploaded successfully");
   };
 
   const handleTrainModel = async () => {
@@ -121,7 +129,7 @@ export default function TrainModel() {
   };
 
   return (
-    <div className="flex flex-col h-full w-full  border-l-2 border-r-2 border-gray-200">
+    <div className="flex flex-col h-full w-full border-l-2 border-r-2 border-gray-200 overflow-y-auto">
       <div className="flex flex-col">
         <div className="flex items-center justify-center">
           <div className="flex flex-col p-10 justify-center w-[80%] ">
@@ -161,7 +169,12 @@ export default function TrainModel() {
                 onChange={handleFileChange}
               />
             </label>
-
+            {/* {validatedPython && python_file.length > 0 && (
+              <div className="text-green-500">{pythonVisible}</div>
+            )}
+            {!validatedPython && python_file.length > 0 && (
+              <div className="text-red-500">{pythonVisible}</div>
+            )} */}
             {file_names.length > 0 && (
               <div className="flex flex-row flex-wrap gap-2 mt-4 w-full overflow-hidden">
                 {file_names.map((file_name, index) =>
@@ -169,12 +182,12 @@ export default function TrainModel() {
                 )}
               </div>
             )}
-            <button
+            {/* <button
               className=" mt-2 border-2 border-white text-white px-4 py-2 rounded-md hover:bg-gray-200 hover:text-black"
               onClick={() => handleUploadPythonFile()}
             >
               Upload Python File
-            </button>
+            </button> */}
 
             <div className="flex mt-10">
               <h1 className="text-3xl font-bold">Train Model Configuration</h1>
