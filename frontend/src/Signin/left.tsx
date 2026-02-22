@@ -11,7 +11,7 @@ export default function SigninLeft() {
 
   const handleSubmit = (e: React.FormEvent) => {
     console.log("in handleSubmit");
-    navigate("/main");
+    navigate("/home");
   };
   return (
     <>

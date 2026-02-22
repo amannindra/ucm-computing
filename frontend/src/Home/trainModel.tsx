@@ -1,4 +1,4 @@
-import { trainModel, validateJson } from "./backend.js";
+import { validateJson, sendPythonFile, sendJson } from "./backend.js";
 import data from "./data.json";
 import Form from "@rjsf/core";
 import validator from "@rjsf/validator-ajv8";
@@ -9,48 +9,90 @@ import Editor from "@monaco-editor/react";
 
 export default function TrainModel() {
   const editorRef = useRef(null);
-  const [validatedJson, setValidatedJson] = useState(false);
+  const [validatedJson, setValidatedJson] = useState<boolean>(true);
+  const [reasonVisible, setReasonVisible] = useState<string>("Json is valid");
+  const [file_names, setFileNames] = useState<string[]>([]);
+  const [python_file, setPythonFile] = useState<File[]>([]);
+
+  const validateJsonSimple = () => {
+    console.log("validateJsonSimple");
+    if (!editorRef.current) {
+      // alert("No editor found");
+      return false;
+    }
+    const { val, reason }: { val: boolean; reason: string } = validateJson(
+      editorRef.current.getValue(),
+    );
+    if (!val) {
+      console.log("reason frontend: ", reason);
+      setReasonVisible(reason);
+      setValidatedJson(false);
+      return false;
+    } else {
+      setValidatedJson(true);
+      setReasonVisible("Json is valid");
+      return true;
+    }
+  };
+
+  function handleEditorChange(value: string | undefined) {
+    if (!value) return;
+    // Re-run validation on every keystroke
+    const { val, reason } = validateJson(value);
+    if (val) {
+      setValidatedJson(true);
+      setReasonVisible("JSON is valid");
+    } else {
+      setValidatedJson(false);
+      setReasonVisible(reason);
+    }
+  }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    console.log(file);
-    const response = await trainModel(file);
-    console.log(response);
-  };
-
-  const schema: RJSFSchema = {
-    title: "Test form",
-    type: "object",
-    properties: {
-      name: {
-        type: "string",
-      },
-      age: {
-        type: "number",
-      },
-    },
-  };
-
-  const handleValidateJson = async () => {
-    console.log("validate json");
-    const val = await validateJson(JSON.parse(editorRef.current.getValue()));
-    if (val) {
-      console.log("Json is valid");
-      setValidatedJson(true);
+    if (file) {
+      console.log("file: ", file);
+      setFileNames([...file_names, file.name]);
+      setPythonFile([...python_file, file]);
     } else {
-      console.log("Json is invalid");
-      setValidatedJson(false);
-      // alert("Json is invalid");
+      console.log("No file selected");
     }
   };
+
+  // const handleValidateJson = async () => {
+  //   validateJsonSimple();
+  // };
+
+
+
+  const handleUploadPythonFile = async () => {
+
+    
+    const response = await sendPythonFile(python_file);
+    if (response.error) {
+      console.log("Error uploading Python file");
+      return;
+    }
+  };
+
   const handleTrainModel = async () => {
-    console.log("train model");
-    const response = await trainModel(JSON.parse(editorRef.current.getValue()));
-    console.log(response);
+    if (validateJsonSimple()) {
+      const response = await sendJson(editorRef.current.getValue());
+      if (response.error) {
+        console.log("Error sending JSON");
+        return;
+      }
+      // const PythonFile = await sendPythonFile(file);
+      // if (PythonFile.error) {
+      //   console.log("Error uploading Python file");
+      //   return;
+      // }
+    } else {
+      console.log("handleTrainModel not running");
+    }
   };
 
   function handleEditorWillMount(monaco: any) {
-    // Define a custom theme that uses your #242424 background
     monaco.editor.defineTheme("customDarkTheme", {
       base: "vs-dark", // Inherit standard dark mode colors
       inherit: true,
@@ -64,6 +106,19 @@ export default function TrainModel() {
   function handleEditorDidMount(editor, monaco) {
     editorRef.current = editor;
   }
+
+  const GridFile = (file_name: string, index: number) => {
+    return (
+      <div
+        className="flex items-center justify-center border border-gray-600 rounded-md p-2 max-w-[200px]"
+        key={index}
+      >
+        <p className="text-sm text-gray-300 truncate w-full text-center">
+          {file_name}
+        </p>
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full w-full  border-l-2 border-r-2 border-gray-200">
@@ -96,20 +151,36 @@ export default function TrainModel() {
                   <span className="font-semibold">Click to upload</span> or drag
                   and drop
                 </p>
-                <p className="text-xs">SVG, PNG, JPG or GIF (MAX. 800x400px)</p>
+                <p className="text-xs">Python file(.py)</p>
               </div>
               <input
                 id="dropzone-file"
                 type="file"
+                accept=".py"
                 className="hidden"
                 onChange={handleFileChange}
               />
             </label>
+
+            {file_names.length > 0 && (
+              <div className="flex flex-row flex-wrap gap-2 mt-4 w-full overflow-hidden">
+                {file_names.map((file_name, index) =>
+                  GridFile(file_name, index),
+                )}
+              </div>
+            )}
+            <button
+              className=" mt-2 border-2 border-white text-white px-4 py-2 rounded-md hover:bg-gray-200 hover:text-black"
+              onClick={() => handleUploadPythonFile()}
+            >
+              Upload Python File
+            </button>
+
             <div className="flex mt-10">
               <h1 className="text-3xl font-bold">Train Model Configuration</h1>
             </div>
             <div className="">
-              <h2 className="text-2xl font-bold mt-4">Documentations</h2>
+              <h2 className="text-2xl font-bold mt-3">Documentations</h2>
               <p className="text-sm text-gray-300 mt-2">
                 In order to train the model, you need to provide the following
                 information:
@@ -124,6 +195,7 @@ export default function TrainModel() {
                   value={JSON.stringify(data, null, 2)}
                   beforeMount={handleEditorWillMount}
                   onMount={handleEditorDidMount}
+                  onChange={handleEditorChange}
                   options={{
                     minimap: { enabled: false },
                     scrollBeyondLastLine: false,
@@ -139,24 +211,18 @@ export default function TrainModel() {
                   }}
                 />
               </div>
-              <div className="flex flex-col">
-                <button
-                  className=" mt-4 border-2 border-white text-white px-4 py-2 rounded-md hover:bg-gray-200 hover:text-black"
-                  onClick={() => handleValidateJson()}
-                >
-                  Validate Json
-                </button>
-                {validatedJson && (
-                  <div className="text-green-500">Json is valid</div>
-                )}
-                {!validatedJson && <div className="text-red-500"></div>}
-                <button
-                  className=" mt-2 border-2 border-white text-white px-4 py-2 rounded-md hover:bg-gray-200 hover:text-black"
-                  onClick={() => handleTrainModel()}
-                >
-                  Train Model
-                </button>
-              </div>
+              {validatedJson && (
+                <div className="text-green-500">{reasonVisible}</div>
+              )}
+              {!validatedJson && (
+                <div className="text-red-500">{reasonVisible}</div>
+              )}
+              <button
+                className=" mt-2 border-2 border-white text-white px-4 py-2 rounded-md hover:bg-gray-200 hover:text-black"
+                onClick={() => handleTrainModel()}
+              >
+                Train Model
+              </button>
             </div>
           </div>
         </div>
