@@ -7,20 +7,19 @@ type User = {
   name: string;
   email: string;
   password: string;
-}
+};
 
 export default function SigninLeft({
   setCreatePassword,
   setUser,
-
 }: {
   createPassword: boolean;
   setCreatePassword: (createPassword: boolean) => void;
   setUser: (user: User | null) => void;
 }) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("amannindra@gmail.com");
   const [error, setError] = useState("");
-  const [password, setPassword] = useState("");
+  const [password, setPassword] = useState("aa55vs28");
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,7 +34,6 @@ export default function SigninLeft({
       setUser(res.user);
       console.log(`user: ${res.user}`);
       navigate("/home");
-
     } else {
       setError(res?.message || "Something went wrong.");
     }
@@ -109,9 +107,7 @@ export default function SigninLeft({
                 </div>
               </div>
 
-              {error && (
-                <p className="text-sm text-red-400">{error}</p>
-              )}
+              {error && <p className="text-sm text-red-400">{error}</p>}
 
               <div>
                 <button

@@ -11,7 +11,7 @@ type User = {
   password: string;
 };
 export default function MainHome({ user }: { user: User | null }) {
-  console.log(`user MainHome: ${user}`);
+  // console.log(`user MainHome: ${user}`);
   const [activeTab, setActiveTab] = useState("trainModel");
 
   const handleTabChange = (tab: string) => {
