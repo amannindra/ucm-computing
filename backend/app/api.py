@@ -83,8 +83,14 @@ async def SignInAPI(signIn: SignIn) -> dict:
     sql.create_table()
     user = sql.get_user(signIn.email, signIn.password)
     if user is None:
-        return {"message": "Invalid email or password.", "success": False}
-    return {"message": "Sign in successful.", "success": True}
+        return {"message": "Invalid email or password.", "success": False, "userUUID": None}
+    print(f"user: {user}")
+    print(f"user type: {type(user)}")
+    print(f"user uuid: {user[0]}")
+    print(f"user name: {user[1]}")
+    print(f"user email: {user[2]}")
+    print(f"user password: {user[3]}")
+    return {"message": "Sign in successful.", "success": True, "user": user}
 
 
 class CreateAccount(BaseModel):

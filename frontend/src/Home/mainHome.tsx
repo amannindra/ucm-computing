@@ -4,8 +4,14 @@ import TrainModel from "./trainModel";
 import { useState } from "react";
 import Default from "./default";
 import Storage from "./storage";
-
-export default function MainHome() {
+type User = {
+  uuid: string;
+  name: string;
+  email: string;
+  password: string;
+};
+export default function MainHome({ user }: { user: User | null }) {
+  console.log(`user MainHome: ${user}`);
   const [activeTab, setActiveTab] = useState("trainModel");
 
   const handleTabChange = (tab: string) => {

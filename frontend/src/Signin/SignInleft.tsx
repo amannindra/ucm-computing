@@ -2,11 +2,21 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signIn } from "./backend.js";
 
+type User = {
+  uuid: string;
+  name: string;
+  email: string;
+  password: string;
+}
+
 export default function SigninLeft({
   setCreatePassword,
+  setUser,
+
 }: {
   createPassword: boolean;
   setCreatePassword: (createPassword: boolean) => void;
+  setUser: (user: User | null) => void;
 }) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -21,8 +31,11 @@ export default function SigninLeft({
       return;
     }
     const res = await signIn(email, password);
-    if (res?.success) {
+    if (res.success) {
+      setUser(res.user);
+      console.log(`user: ${res.user}`);
       navigate("/home");
+
     } else {
       setError(res?.message || "Something went wrong.");
     }

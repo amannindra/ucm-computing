@@ -6,9 +6,7 @@ export default function Panel({
   const handleTrainModelClick = () => {
     onTabChange("trainModel");
   };
-  const handleGenerateClick = () => {
-    onTabChange("default");
-  };
+
   const handleStorageClick = () => {
     onTabChange("storage");
   };

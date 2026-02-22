@@ -4,10 +4,11 @@ import { Link } from "react-router-dom";
 import SigninLeft from "./SignInleft";
 import CreateAccountLeft from "./createAccountleft";
 
-export default function Signin() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
+export default function Signin({
+  setUser,
+}: {
+  setUser: (user: User | null) => void;
+}) {
   const [createPassword, setCreatePassword] = useState(false);
 
   return (
@@ -18,11 +19,13 @@ export default function Signin() {
             <CreateAccountLeft
               createPassword={createPassword}
               setCreatePassword={setCreatePassword}
+              setUser={setUser}
             />
           ) : (
             <SigninLeft
               createPassword={createPassword}
               setCreatePassword={setCreatePassword}
+              setUser={setUser}
             />
           )}
         </div>{" "}
