@@ -1,3 +1,7 @@
+import ssl
+import urllib.request
+ssl._create_default_https_context = ssl._create_unverified_context
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -94,7 +98,7 @@ def evaluate(
 def main() -> None:
     device = get_device()
     if device.type == "cpu":
-        sys.exit("GPU is not supported")
+        print("GPU is not supported")
     else:
         print(f"Using device: {device}")
         
