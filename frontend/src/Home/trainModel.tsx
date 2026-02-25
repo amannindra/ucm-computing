@@ -1,9 +1,14 @@
-import { validateJson, sendPythonFile, sendJson } from "./backend.js";
+import {
+  validateJson,
+  sendPythonFile,
+  sendJson,
+  sendJsonPythonFile,
+} from "./backend";
 import data from "./data.json";
 import { useRef, useState } from "react";
 
 import loader from "@monaco-editor/loader";
-import Editor from "@monaco-editor/react";
+import Editor from "@monaco-editor/react";  
 
 export default function TrainModel() {
   const editorRef = useRef(null);
@@ -17,7 +22,6 @@ export default function TrainModel() {
   const validateJsonSimple = () => {
     console.log("validateJsonSimple");
     if (!editorRef.current) {
-      // alert("No editor found");
       return false;
     }
     const { val, reason }: { val: boolean; reason: string } = validateJson(
@@ -63,38 +67,38 @@ export default function TrainModel() {
   //   validateJsonSimple();
   // };
 
-  const handleUploadPythonFile = async () => {
-    if (python_file.length === 0) {
-      // console.log("No Python files selected");
-      setpythonVisible("Python files not uploaded");
-      setValidatedPython(false);
-      return;
-    }
+  // const handleUploadPythonFile = async () => {
+  //   if (python_file.length === 0) {
+  //     // console.log("No Python files selected");
+  //     setpythonVisible("Python files not uploaded");
+  //     setValidatedPython(false);
+  //     return;
+  //   }
 
-    const response = await sendPythonFile(python_file);
-    if (response.error) {
-      console.log("Error uploading Python file");
-      setpythonVisible("Error uploading Python file");
-      setValidatedPython(false);
-      return;
-    }
-    setPythonFile([]);
-    setValidatedPython(true);
-    setpythonVisible("Python file uploaded successfully");
-  };
+  //   const response = await sendPythonFile(python_file);
+  //   if (response.error) {
+  //     console.log("Error uploading Python file");
+  //     setpythonVisible("Error uploading Python file");
+  //     setValidatedPython(false);
+  //     return;
+  //   }
+  //   setPythonFile([]);
+  //   setValidatedPython(true);
+  //   setpythonVisible("Python file uploaded successfully");
+  // };
 
   const handleTrainModel = async () => {
     if (validateJsonSimple()) {
-      const response = await sendJson(editorRef.current.getValue());
-      if (response.error) {
-        console.log("Error sending JSON");
-        return;
+      if (python_file.length > 0) {
+        const response = await sendJsonPythonFile(
+          editorRef.current.getValue(),
+          python_file,
+        );
+        if (response.error) {
+          console.log("Error sending JSON");
+          return;
+        }
       }
-      // const PythonFile = await sendPythonFile(file);
-      // if (PythonFile.error) {
-      //   console.log("Error uploading Python file");
-      //   return;
-      // }
     } else {
       console.log("handleTrainModel not running");
     }
@@ -115,6 +119,11 @@ export default function TrainModel() {
     editorRef.current = editor;
   }
 
+  const handleDeleteFile = (file_name: string) => {
+    setFileNames(file_names.filter((name) => name !== file_name));
+    setPythonFile(python_file.filter((file) => file.name !== file_name));
+  };
+
   const GridFile = (file_name: string, index: number) => {
     return (
       <div
@@ -124,6 +133,7 @@ export default function TrainModel() {
         <p className="text-sm text-gray-300 truncate w-full text-center">
           {file_name}
         </p>
+        <button className="ml-2 text-sm text-gray-300 hover:text-white" onClick={() => handleDeleteFile(file_name)}>X</button>
       </div>
     );
   };

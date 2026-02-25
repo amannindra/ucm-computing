@@ -1,9 +1,11 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os 
 import uuid
 from . import sql_py
+import json
+import subprocess
 app = FastAPI()
 
 origins = [
@@ -26,13 +28,33 @@ async def read_root() -> dict:
     return {"message": "Welcome to UCM Computing."}
 
 
-
 class Parameters(BaseModel):
     pytorch_version: float
     use_cuda: bool
     model_name: str
     dependencies: str
     hyperparameters: dict
+
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+@app.post("/jsonPythonFile", tags=["jsonPythonFile"])
+async def jsonPythonFile(metadata: str = Form(...), python_files: list[UploadFile] = File(...)) -> dict:
+    print("jsonPythonFile")
+    print(f"metadata: {metadata}")
+    json_data = json.loads(metadata)
+    print(f"json_data: {json_data}")
+    print(f"python_files: {python_files}")
+    subprocess.run(["python", f"{UPLOAD_DIR}/test.py", "--epochs", json_data["hyperparameters"]["epochs"], "--learning_rate", json_data["hyperparameters"]["learning_rate"], "--batch_size", json_data["hyperparameters"]["batch_size"], "--num_workers", json_data["hyperparameters"]["num_workers"], "--pin_memory", json_data["hyperparameters"]["pin_memory"]])
+    for file in python_files:
+        print(f"file: {file}")
+        file_path = os.path.join(UPLOAD_DIR, file.filename)
+        with open(file_path, "wb") as f:
+            f.write(await file.read())
+    return {"message": "JSON and Python files uploaded successfully.", "success": True}
+
+
 
 
 @app.post("/parameters", tags=["parameters"])
@@ -48,8 +70,7 @@ async def GetParameters(parameters: Parameters) -> dict:
     return {"message": "Training started.", "success": True}
 
 
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 
 @app.post("/pythonFile", tags=["pythonFile"])
 async def UploadPythonFile(python_files: list[UploadFile] = File(...)) -> dict:
@@ -112,5 +133,4 @@ async def CreateAccountAPI(createAccount: CreateAccount) -> dict:
     res = sql.get_users()
     print(res)
     return {"message": "Account created successfully.", "success": True}
-
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signIn } from "./backend.js";
+import { signIn } from "./backend";
 
 type User = {
   uuid: string;

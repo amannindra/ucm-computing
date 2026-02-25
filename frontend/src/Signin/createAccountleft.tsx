@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createAccount } from "./backend.js";
+import { createAccount } from "./backend";
 
 export default function CreateAccountLeft({
   setCreatePassword,

@@ -1,5 +1,39 @@
 import axios from "axios";
 
+type JsonParameters = {
+  pytorch_version: number;
+  use_cuda: boolean;
+  model_name: string;
+  dependencies: string;
+  hyperparameters: any;
+};
+export const sendJsonPythonFile = async (
+  JsonParameters: JsonParameters,
+  python_files: File[],
+) => {
+  // const jsonString = JSON.stringify(JsonParameters);
+
+  const formData = new FormData();
+
+  formData.append("metadata", JSON.stringify(JsonParameters));
+  for (const file of python_files) {
+    console.log("file name: ", file.name);
+
+    formData.append("python_files", file, file.name);
+  }
+  console.log("python_files: ", python_files);
+  // console.log("jsonString: ", jsonString);
+  try {
+    const response = await axios.post(
+      "http://localhost:8000/jsonPythonFile",
+      formData,
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error sending JSON and Python file", error);
+  }
+};
+
 export const sendJson = async (json) => {
   try {
     const response = await axios.post(
