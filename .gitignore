@@ -29,3 +29,5 @@ testModel/data
 
 *.venv
 
+backend/app/__pycache__/*
+backend/train/__pycache__/*

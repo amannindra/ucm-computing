@@ -6,6 +6,7 @@ import uuid
 from . import sql_py
 import json
 import subprocess
+from . import testsubprocess
 app = FastAPI()
 
 origins = [
@@ -35,7 +36,9 @@ class Parameters(BaseModel):
     dependencies: str
     hyperparameters: dict
 
-UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
+# UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
+print(os.getcwd())
+UPLOAD_DIR = "train"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -45,6 +48,9 @@ async def jsonPythonFile(metadata: str = Form(...), python_files: list[UploadFil
     print("jsonPythonFile")
     print(f"metadata: {metadata}")
     json_data = json.loads(metadata)
+    json_path = os.path.join(UPLOAD_DIR, "parameters.json")
+    with open(json_path, "w") as f:
+        json.dump(json_data, f)
     print(f"json_data: {json_data}")
     print(f"python_files: {python_files}")
     # subprocess.run(["python", f"{UPLOAD_DIR}/test.py", "--epochs", json_data["hyperparameters"]["epochs"], "--learning_rate", json_data["hyperparameters"]["learning_rate"], "--batch_size", json_data["hyperparameters"]["batch_size"], "--num_workers", json_data["hyperparameters"]["num_workers"], "--pin_memory", json_data["hyperparameters"]["pin_memory"]])
@@ -53,6 +59,8 @@ async def jsonPythonFile(metadata: str = Form(...), python_files: list[UploadFil
         file_path = os.path.join(UPLOAD_DIR, file.filename)
         with open(file_path, "wb") as f:
             f.write(await file.read())
+    
+    testsubprocess.run_command();
             
             
     return {"message": "JSON and Python files uploaded successfully.", "success": True}

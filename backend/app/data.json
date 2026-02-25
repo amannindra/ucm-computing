@@ -5,21 +5,9 @@
   "dependencies": "requirements.txt",
   "hyperparameters": {
     "epochs": 10,
-    "batch_size": 128,
+    "batch_size": 8,
     "learning_rate": 0.001,
-    "weight_decay": 0.0001,
-    "momentum": 0.9,
-    "optimizer": "adam",
-    "lr_scheduler": "cosine",
-    "lr_step_size": 5,
-    "lr_gamma": 0.1,
     "num_workers": 2,
-    "pin_memory": true,
-    "shuffle": true,
-    "dropout": 0.5,
-    "pretrained": false,
-    "device": "cuda",
-    "mixed_precision": false,
-    "gradient_clip": 1.0
+    "pin_memory": true
   }
 }

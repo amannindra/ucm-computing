@@ -1,6 +1,0 @@
-from minio import Minio
-
-client = Minio(os.getenv("MINIO_ENDPOINT"),
-    access_key="Q3AM3UQ867SPQQA43P2F",
-    secret_key="zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
-)
