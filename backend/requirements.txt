@@ -7,3 +7,8 @@ flask
 flask-cors
 python-multipart
 uvicorn
+torch
+torchvision
+tqdm
+argparse
+time

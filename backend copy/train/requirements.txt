@@ -1,6 +1,0 @@
-matplotlib
-torch
-torchvision
-tqdm
-argparse
-time

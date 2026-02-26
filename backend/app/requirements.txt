@@ -1,3 +1,11 @@
+fastapi
+uvicorn
+python-dotenv
+pydantic
+minio
+flask
+flask-cors
+python-multipart
 torch
 torchvision
 tqdm
