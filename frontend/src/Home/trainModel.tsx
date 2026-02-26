@@ -91,10 +91,10 @@ export default function TrainModel() {
     if (validateJsonSimple()) {
       if (python_file.length > 0) {
         const response = await sendJsonPythonFile(
-          editorRef.current.getValue(),
+          JSON.parse(editorRef.current.getValue()),
           python_file,
         );
-        if (response.error) {
+        if (!response || response.error) {
           console.log("Error sending JSON");
           return;
         }
@@ -174,7 +174,7 @@ export default function TrainModel() {
               <input
                 id="dropzone-file"
                 type="file"
-                accept=".py"
+                accept=".py, .txt"
                 className="hidden"
                 onChange={handleFileChange}
               />

@@ -40,6 +40,7 @@ class Parameters(BaseModel):
 print(os.getcwd())
 UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
 
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.post("/jsonPythonFile", tags=["jsonPythonFile"])
 
@@ -48,7 +49,6 @@ async def jsonPythonFile(metadata: str = Form(...), python_files: list[UploadFil
     print(f"metadata: {metadata}")
     json_data = json.loads(metadata)
     json_path = os.path.join(UPLOAD_DIR, "parameters.json")
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
     with open(json_path, "w") as f:
         json.dump(json_data, f)
     print(f"json_data: {json_data}")

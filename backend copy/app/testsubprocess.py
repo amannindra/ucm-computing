@@ -12,6 +12,7 @@ def get_paramaters():
 
 
 def run_command():
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     subprocess.run(["rm", "-rf", ".venv"], cwd=UPLOAD_DIR)
 

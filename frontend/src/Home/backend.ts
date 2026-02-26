@@ -11,18 +11,19 @@ export const sendJsonPythonFile = async (
   JsonParameters: JsonParameters,
   python_files: File[],
 ) => {
-  // const jsonString = JSON.stringify(JsonParameters);
-
   const formData = new FormData();
 
   formData.append("metadata", JSON.stringify(JsonParameters));
+
+  // Read each file into memory immediately to avoid ERR_UPLOAD_FILE_CHANGED
+  // (the browser can lose the file reference if the file changes on disk)
   for (const file of python_files) {
     console.log("file name: ", file.name);
-
-    formData.append("python_files", file, file.name);
+    const buffer = await file.arrayBuffer();
+    const blob = new Blob([buffer], { type: file.type || "text/plain" });
+    formData.append("python_files", blob, file.name);
   }
-  console.log("python_files: ", python_files);
-  // console.log("jsonString: ", jsonString);
+
   try {
     const response = await axios.post(
       "http://localhost:8000/jsonPythonFile",
@@ -31,6 +32,7 @@ export const sendJsonPythonFile = async (
     return response.data;
   } catch (error) {
     console.error("Error sending JSON and Python file", error);
+    return { error: "Error sending JSON and Python file" };
   }
 };
 
