@@ -12,3 +12,5 @@ torchvision
 tqdm
 argparse
 time
+websockets
+asyncio

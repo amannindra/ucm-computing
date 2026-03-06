@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
@@ -10,8 +10,8 @@ from . import testsubprocess
 app = FastAPI()
 
 origins = [
-    "http://localhost:5173",
-    "localhost:5173"
+    "http://localhost:5174",
+    "localhost:5174"
 ]
 
 
@@ -41,8 +41,16 @@ print(os.getcwd())
 UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
 
 
-@app.post("/jsonPythonFile", tags=["jsonPythonFile"])
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        print(f"Received: {data}")
+        await websocket.send_text(f"Message received: {data}")
 
+
+@app.post("/jsonPythonFile", tags=["jsonPythonFile"])
 async def jsonPythonFile(metadata: str = Form(...), python_files: list[UploadFile] = File(...)) -> dict:
     print("jsonPythonFile")
     print(f"metadata: {metadata}")

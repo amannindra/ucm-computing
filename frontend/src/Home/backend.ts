@@ -1,11 +1,12 @@
 import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
 
 type JsonParameters = {
   pytorch_version: number;
   use_cuda: boolean;
   model_name: string;
   dependencies: string;
-  hyperparameters: any;
+  hyperparameters: Record<string, unknown>;
 };
 export const sendJsonPythonFile = async (
   JsonParameters: JsonParameters,
@@ -14,7 +15,8 @@ export const sendJsonPythonFile = async (
   const formData = new FormData();
 
   formData.append("metadata", JSON.stringify(JsonParameters));
-
+  const client_id = uuidv4();
+  formData.append("client_id", client_id);
   // Read each file into memory immediately to avoid ERR_UPLOAD_FILE_CHANGED
   // (the browser can lose the file reference if the file changes on disk)
   for (const file of python_files) {
@@ -36,7 +38,17 @@ export const sendJsonPythonFile = async (
   }
 };
 
-export const sendJson = async (json) => {
+export const connectToWebSocket = async () => {
+  const ws = new WebSocket("ws://localhost:8000/ws");
+  ws.onmessage = (event) => {
+    console.log("Received message: ", event.data);
+  };
+  ws.onopen = () => {
+    console.log("WebSocket connected");
+  };
+};
+
+export const sendJson = async (json: JsonParameters) => {
   try {
     const response = await axios.post(
       "http://localhost:8000/parameters",
@@ -53,7 +65,7 @@ export const sendJson = async (json) => {
   }
 };
 
-export const sendPythonFile = async (python_files) => {
+export const sendPythonFile = async (python_files: File[]) => {
   const formData = new FormData();
 
   for (const file_p of python_files) {
@@ -106,31 +118,32 @@ const valid_pytorch_versions = [
   2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 2.1,
 ];
 
-export const validateJson = (json) => {
+export const validateJson = (json: string) => {
   let reasonSet = "No Fail";
+  let parsedJson: JsonParameters;
 
   try {
-    json = JSON.parse(json);
+    parsedJson = JSON.parse(json) as JsonParameters;
   } catch (error) {
     return { val: false, reason: "Json Parse Error" };
   }
 
-  let all = {
-    "pytorch version": json.pytorch_version,
-    CUDA: json.use_cuda,
-    "model name": json.model_name,
-    "dependencies file": json.dependencies,
-    hyperparameters: json.hyperparameters,
+  const all: Record<string, unknown> = {
+    "pytorch version": parsedJson.pytorch_version,
+    CUDA: parsedJson.use_cuda,
+    "model name": parsedJson.model_name,
+    "dependencies file": parsedJson.dependencies,
+    hyperparameters: parsedJson.hyperparameters,
   };
 
   console.log("all: ", all);
 
   if (
-    json.pytorch_version &&
-    json.use_cuda &&
-    json.model_name &&
-    json.dependencies &&
-    json.hyperparameters
+    parsedJson.pytorch_version &&
+    parsedJson.use_cuda &&
+    parsedJson.model_name &&
+    parsedJson.dependencies &&
+    parsedJson.hyperparameters
   ) {
     console.log("All fields are present");
   } else {
@@ -142,20 +155,20 @@ export const validateJson = (json) => {
     }
   }
 
-  if (!valid_pytorch_versions.includes(json.pytorch_version)) {
-    reason = "Pytorch version is invalid";
+  if (!valid_pytorch_versions.includes(parsedJson.pytorch_version)) {
+    reasonSet = "Pytorch version is invalid";
     return { val: false, reason: reasonSet };
   }
-  if (!(json.use_cuda == true)) {
-    reason = "Use CUDA is invalid";
+  if (!(parsedJson.use_cuda == true)) {
+    reasonSet = "Use CUDA is invalid";
     return { val: false, reason: reasonSet };
   }
-  if (!json.model_name.endsWith(valid_model_names)) {
-    reason = "Model name is invalid";
+  if (!parsedJson.model_name.endsWith(valid_model_names)) {
+    reasonSet = "Model name is invalid";
     return { val: false, reason: reasonSet };
   }
-  if (!json.dependencies.endsWith(valid_dependencies)) {
-    reason = "Dependencies is invalid";
+  if (!parsedJson.dependencies.endsWith(valid_dependencies)) {
+    reasonSet = "Dependencies is invalid";
     return { val: false, reason: reasonSet };
   }
   console.log("reason backend: ", reasonSet);

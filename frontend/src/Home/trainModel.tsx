@@ -1,47 +1,105 @@
-import {
-  validateJson,
-  sendPythonFile,
-  sendJson,
-  sendJsonPythonFile,
-} from "./backend";
+import { validateJson, sendJsonPythonFile } from "./backend";
 import data from "./data.json";
 import { useRef, useState } from "react";
-
-import loader from "@monaco-editor/loader";
-import Editor from "@monaco-editor/react";  
-
+import Editor from "@monaco-editor/react";
+import Terminal, { ColorMode, TerminalOutput } from "react-terminal-ui";
+import { connectToWebSocket } from "./backend";
 export default function TrainModel() {
-  const editorRef = useRef(null);
+  type EditorInstance = {
+    getValue: () => string;
+  };
+
+  type ValidationResult = {
+    val: boolean;
+    reason: string;
+  };
+
+  type TerminalLine = {
+    id: number;
+    text: string;
+  };
+
+  const initialTerminalMessage =
+    'Ready. Upload Python files and click "Train Model" to start.';
+
+  const editorRef = useRef<EditorInstance | null>(null);
   const [validatedJson, setValidatedJson] = useState<boolean>(true);
   const [reasonVisible, setReasonVisible] = useState<string>("Json is valid");
   const [file_names, setFileNames] = useState<string[]>([]);
   const [python_file, setPythonFile] = useState<File[]>([]);
-  const [pythonVisible, setpythonVisible] = useState<string>("No Python Files");
-  const [validatedPython, setValidatedPython] = useState<boolean>(false);
+  const [terminalLines, setTerminalLines] = useState<TerminalLine[]>([
+    { id: 0, text: initialTerminalMessage },
+  ]);
 
-  const validateJsonSimple = () => {
-    console.log("validateJsonSimple");
-    if (!editorRef.current) {
-      return false;
+  const appendTerminalLines = (lines: string[]) => {
+    setTerminalLines((current) => {
+      const lastId = current.length > 0 ? current[current.length - 1].id : -1;
+      return [
+        ...current,
+        ...lines.map((text, index) => ({
+          id: lastId + index + 1,
+          text,
+        })),
+      ];
+    });
+  };
+
+  const appendTerminalLine = (text: string) => {
+    appendTerminalLines([text]);
+  };
+
+  const resetTerminal = () => {
+    setTerminalLines([{ id: 0, text: initialTerminalMessage }]);
+  };
+
+  const writeResponseToTerminal = (response: unknown) => {
+    if (!response) {
+      return;
     }
-    const { val, reason }: { val: boolean; reason: string } = validateJson(
-      editorRef.current.getValue(),
-    );
-    if (!val) {
-      console.log("reason frontend: ", reason);
-      setReasonVisible(reason);
-      setValidatedJson(false);
-      return false;
-    } else {
-      setValidatedJson(true); //localhost:5173/home
-      setReasonVisible("Json is valid");
-      return true;
+
+    if (typeof response === "string") {
+      appendTerminalLine(`server> ${response}`);
+      return;
+    }
+
+    if (typeof response === "object") {
+      const responseLines = JSON.stringify(response, null, 2)
+        .split("\n")
+        .map((line) => `server> ${line}`);
+      appendTerminalLines(responseLines);
     }
   };
 
+  const validateJsonSimple = (): ValidationResult => {
+    if (!editorRef.current) {
+      const reason = "Editor is not ready yet";
+      setReasonVisible(reason);
+      setValidatedJson(false);
+      return { val: false, reason };
+    }
+
+    const { val, reason }: ValidationResult = validateJson(
+      editorRef.current.getValue(),
+    );
+
+    if (!val) {
+      setReasonVisible(reason);
+      setValidatedJson(false);
+      return { val, reason };
+    }
+
+    setValidatedJson(true);
+    setReasonVisible("Json is valid");
+    return { val: true, reason: "Json is valid" };
+  };
+
   function handleEditorChange(value: string | undefined) {
-    if (!value) return;
-    // Re-run validation on every keystroke
+    if (!value) {
+      setValidatedJson(false);
+      setReasonVisible("Json Parse Error");
+      return;
+    }
+
     const { val, reason } = validateJson(value);
     if (val) {
       setValidatedJson(true);
@@ -55,9 +113,9 @@ export default function TrainModel() {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      console.log("file: ", file);
-      setFileNames([...file_names, file.name]);
-      setPythonFile([...python_file, file]);
+      setFileNames((current) => [...current, file.name]);
+      setPythonFile((current) => [...current, file]);
+      appendTerminalLine(`Attached file: ${file.name}`);
     } else {
       console.log("No file selected");
     }
@@ -88,20 +146,47 @@ export default function TrainModel() {
   // };
 
   const handleTrainModel = async () => {
-    if (validateJsonSimple()) {
-      if (python_file.length > 0) {
-        const response = await sendJsonPythonFile(
-          JSON.parse(editorRef.current.getValue()),
-          python_file,
-        );
-        if (!response || response.error) {
-          console.log("Error sending JSON");
-          return;
-        }
-      }
-    } else {
-      console.log("handleTrainModel not running");
+    appendTerminalLine("$ train-model");
+    appendTerminalLine("Checking training configuration...");
+
+    const validation = validateJsonSimple();
+    if (!validation.val) {
+      appendTerminalLine(`Validation failed: ${validation.reason}`);
+      return;
     }
+
+    if (!editorRef.current) {
+      appendTerminalLine("Training cancelled: editor is unavailable.");
+      return;
+    }
+
+    if (python_file.length === 0) {
+      appendTerminalLine(
+        "Training cancelled: upload at least one Python file.",
+      );
+      return;
+    }
+
+    appendTerminalLine("Configuration valid.");
+    appendTerminalLine(`Preparing ${python_file.length} file(s) for upload...`);
+    appendTerminalLine(
+      "Sending request to backend at http://localhost:8000...",
+    );
+
+    const response = await sendJsonPythonFile(
+      JSON.parse(editorRef.current.getValue()),
+      python_file,
+    );
+
+    if (!response || response.error) {
+      appendTerminalLine(
+        `Training request failed: ${response?.error ?? "Unknown error"}`,
+      );
+      return;
+    }
+
+    appendTerminalLine("Training request accepted.");
+    writeResponseToTerminal(response);
   };
 
   function handleEditorWillMount(monaco: any) {
@@ -115,13 +200,16 @@ export default function TrainModel() {
     });
   }
 
-  function handleEditorDidMount(editor, monaco) {
+  function handleEditorDidMount(editor: EditorInstance) {
     editorRef.current = editor;
   }
 
   const handleDeleteFile = (file_name: string) => {
-    setFileNames(file_names.filter((name) => name !== file_name));
-    setPythonFile(python_file.filter((file) => file.name !== file_name));
+    setFileNames((current) => current.filter((name) => name !== file_name));
+    setPythonFile((current) =>
+      current.filter((file) => file.name !== file_name),
+    );
+    appendTerminalLine(`Removed file: ${file_name}`);
   };
 
   const GridFile = (file_name: string, index: number) => {
@@ -133,10 +221,17 @@ export default function TrainModel() {
         <p className="text-sm text-gray-300 truncate w-full text-center">
           {file_name}
         </p>
-        <button className="ml-2 text-sm text-gray-300 hover:text-white" onClick={() => handleDeleteFile(file_name)}>X</button>
+        <button
+          className="ml-2 text-sm text-gray-300 hover:text-white"
+          onClick={() => handleDeleteFile(file_name)}
+        >
+          X
+        </button>
       </div>
     );
   };
+
+  connectToWebSocket();
 
   return (
     <div className="flex flex-col h-full w-full border-l-2 border-r-2 border-gray-200 overflow-y-auto">
@@ -159,9 +254,9 @@ export default function TrainModel() {
                 >
                   <path
                     stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
                     d="M15 17h3a3 3 0 0 0 0-6h-.025a5.56 5.56 0 0 0 .025-.5A5.5 5.5 0 0 0 7.207 9.021C7.137 9.017 7.071 9 7 9a4 4 0 1 0 0 8h2.167M12 19v-9m0 0-2 2m2-2 2 2"
                   />
                 </svg>
@@ -246,6 +341,19 @@ export default function TrainModel() {
               >
                 Train Model
               </button>
+              <div className="mt-4 overflow-hidden rounded-md border border-gray-600">
+                <Terminal
+                  name="Training Console"
+                  height="260px"
+                  colorMode={ColorMode.Dark}
+                  prompt=">"
+                  redBtnCallback={resetTerminal}
+                >
+                  {terminalLines.map((line) => (
+                    <TerminalOutput key={line.id}>{line.text}</TerminalOutput>
+                  ))}
+                </Terminal>
+              </div>
             </div>
           </div>
         </div>
