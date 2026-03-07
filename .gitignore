@@ -31,3 +31,4 @@ testModel/data
 
 backend/app/__pycache__/*
 backend/train/__pycache__/*
+backend/venv
