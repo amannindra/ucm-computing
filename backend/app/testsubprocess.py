@@ -1,8 +1,12 @@
 import json
 import subprocess
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
-UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
+
+UPLOAD_DIR = os.getenv("UPLOAD_DIR")
+print(f"UPLOAD_DIR: {UPLOAD_DIR}")
 
 
 def get_paramaters():
@@ -12,14 +16,14 @@ def get_paramaters():
 
 
 def run_command():
-
     subprocess.run(["rm", "-rf", ".venv"], cwd=UPLOAD_DIR)
 
     print("Creating virtual environment")
     subprocess.run(["python3", "-m", "venv", ".venv"], cwd=UPLOAD_DIR)
-
+    subprocess.run(["python3", "-m", "pip", "install", "-upgrade", "pip"], cwd=UPLOAD_DIR)
     json_data = get_paramaters()
     print(f"parameters: {json_data}")
+    print(f"python main: {json_data['python_main']}")
     print(f"dependencies: {json_data['dependencies']}")
 
     subprocess.run(
@@ -27,6 +31,7 @@ def run_command():
          "--trusted-host", "pypi.org", "--trusted-host", "files.pythonhosted.org"],
         cwd=UPLOAD_DIR
     )
+
 
     run = [".venv/bin/python", "test.py"]
     run += ["--use_cuda",   str(json_data["use_cuda"]).lower()]

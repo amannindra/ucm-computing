@@ -98,41 +98,18 @@ def evaluate(
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs",         type=int,   default=10)
-    parser.add_argument("--learning_rate",  type=float, default=0.001)
-    parser.add_argument("--batch_size",     type=int,   default=128)
-    parser.add_argument("--num_workers",    type=int,   default=2)
-    parser.add_argument("--pin_memory",     type=str,   default="True")
-    # New ones
-    # parser.add_argument("--weight_decay",   type=float, default=0.0001)
-    # parser.add_argument("--momentum",       type=float, default=0.9)
-    # parser.add_argument("--optimizer",      type=str,   default="adam")
-    # parser.add_argument("--lr_scheduler",   type=str,   default="cosine")
-    # parser.add_argument("--lr_step_size",   type=int,   default=5)
-    # parser.add_argument("--lr_gamma",       type=float, default=0.1)
-    # parser.add_argument("--shuffle",        type=str,   default="True")
-    # parser.add_argument("--dropout",        type=float, default=0.5)
-    # parser.add_argument("--pretrained",     type=str,   default="False")
-    # parser.add_argument("--device",         type=str,   default="cuda")
-    # parser.add_argument("--mixed_precision",type=str,   default="False")
-    # parser.add_argument("--gradient_clip",  type=float, default=1.0)
-    print("using argparse")
-    args = parser.parse_args()
-
-    print("using argparse")
+    parser.add_argument("--epochs", type=int, default=1)
+    parser.add_argument("--learning_rate", type=int, default=128)
+    parser.add_argument("--batch_size", type=int, default=2)
+    parser.add_argument("--num_workers", type=int, default=2)
+    parser.add_argument("--pin_memory", type=bool, default=True)
     args = parser.parse_args()
     
-    epochs = args.epochs
-    learning_rate = args.learning_rate
-    batch_size = args.batch_size
-    num_workers = args.num_workers
-    pin_memory = args.pin_memory
-    
-    print(f"Epochs: {int(args.epochs)}")
+    print(f"Epochs: {args.epochs}")
     print(f"Learning Rate: {args.learning_rate}")
-    print(f"Batch Size: {int(args.batch_size)}")
-    print(f"Num Workers: {int(args.num_workers)}")
-    print(f"Pin Memory: {bool(args.pin_memory)}")
+    print(f"Batch Size: {args.batch_size}")
+    print(f"Num Workers: {args.num_workers}")
+    print(f"Pin Memory: {args.pin_memory}")
     
 
     device = get_device()
@@ -167,29 +144,30 @@ def main() -> None:
 
     train_loader = DataLoader(
         train_dataset,
-        batch_size=batch_size,
+        batch_size=128,
         shuffle=True,
-        num_workers=num_workers,
-        pin_memory=pin_memory,
+        num_workers=2,
+        pin_memory=(device.type == "cuda"),
     )
     test_loader = DataLoader(
         test_dataset,
-        batch_size=batch_size,
+        batch_size=256,
         shuffle=False,
-        num_workers=num_workers,
-        pin_memory=pin_memory,
+        num_workers=2,
+        pin_memory=(device.type == "cuda"),
     )
 
     model = build_model(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
+    epochs = 1
     for epoch in range(1, epochs + 1):
         train_one_epoch(model, train_loader, criterion, optimizer, device, epoch)
 
     evaluate(model, test_loader, criterion, device)
     
-    torch.save(model.state_dict(), "model.pth")
+    torch.save(model.state_dict(), "testModel/model.pth")
 
 
 if __name__ == "__main__":

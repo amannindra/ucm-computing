@@ -2,6 +2,7 @@ import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
 type JsonParameters = {
+  python_main: string;
   pytorch_version: number;
   use_cuda: boolean;
   model_name: string;
@@ -129,6 +130,7 @@ export const validateJson = (json: string) => {
   }
 
   const all: Record<string, unknown> = {
+    "python main": parsedJson.python_main,
     "pytorch version": parsedJson.pytorch_version,
     CUDA: parsedJson.use_cuda,
     "model name": parsedJson.model_name,
@@ -139,10 +141,12 @@ export const validateJson = (json: string) => {
   console.log("all: ", all);
 
   if (
+    parsedJson.python_main &&
+    parsedJson.python_main.endsWith(".py") &&
     parsedJson.pytorch_version &&
     parsedJson.use_cuda &&
-    parsedJson.model_name &&
-    parsedJson.dependencies &&
+    parsedJson.model_name.endsWith(".pth") &&
+    parsedJson.dependencies.endsWith(".txt") &&
     parsedJson.hyperparameters
   ) {
     console.log("All fields are present");
@@ -154,7 +158,10 @@ export const validateJson = (json: string) => {
       }
     }
   }
-
+  if (!parsedJson.python_main.endsWith(".py")) {
+    reasonSet = "Python main is invalid";
+    return { val: false, reason: reasonSet };
+  }
   if (!valid_pytorch_versions.includes(parsedJson.pytorch_version)) {
     reasonSet = "Pytorch version is invalid";
     return { val: false, reason: reasonSet };

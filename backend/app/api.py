@@ -10,8 +10,8 @@ from . import testsubprocess
 app = FastAPI()
 
 origins = [
-    "http://localhost:5174",
-    "localhost:5174"
+    "http://localhost:5173",
+    "localhost:5173"
 ]
 
 
@@ -38,7 +38,9 @@ class Parameters(BaseModel):
 
 # UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
 print(os.getcwd())
-UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
+#UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
+UPLOAD_DIR = os.getenv("UPLOAD_DIR_MAC")
+print(f"UPLOAD_DIR: {UPLOAD_DIR}")
 
 
 @app.websocket("/ws")
@@ -52,7 +54,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 @app.post("/jsonPythonFile", tags=["jsonPythonFile"])
 async def jsonPythonFile(metadata: str = Form(...), python_files: list[UploadFile] = File(...)) -> dict:
-    print("jsonPythonFile")
+    print("jsonPythonFile print")
     print(f"metadata: {metadata}")
     json_data = json.loads(metadata)
     json_path = os.path.join(UPLOAD_DIR, "parameters.json")
