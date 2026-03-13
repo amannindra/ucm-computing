@@ -98,26 +98,29 @@ def evaluate(
 
 def main() -> None:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--use_cuda", type=lambda x: x.lower() == "true", default=True)
+    parser.add_argument("--model_name", type=str, default="model.pth")
     parser.add_argument("--epochs", type=int, default=1)
-    parser.add_argument("--learning_rate", type=int, default=128)
-    parser.add_argument("--batch_size", type=int, default=2)
+    parser.add_argument("--learning_rate", type=float, default=1e-3)
+    parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--num_workers", type=int, default=2)
-    parser.add_argument("--pin_memory", type=bool, default=True)
+    parser.add_argument("--pin_memory", type=lambda x: x.lower() == "true", default=True)
     args = parser.parse_args()
-    
+
+    print(f"Use CUDA: {args.use_cuda}")
+    print(f"Model Name: {args.model_name}")
     print(f"Epochs: {args.epochs}")
     print(f"Learning Rate: {args.learning_rate}")
     print(f"Batch Size: {args.batch_size}")
     print(f"Num Workers: {args.num_workers}")
     print(f"Pin Memory: {args.pin_memory}")
-    
 
-    device = get_device()
+    device = get_device() if args.use_cuda else torch.device("cpu")
     if device.type == "cpu":
-        print("GPU is not supported")
+        print("Running on CPU")
     else:
         print(f"Using device: {device}")
-        
+
     if device.type == "cuda":
         print(f"GPU: {torch.cuda.get_device_name(0)}")
         torch.backends.cudnn.benchmark = True
@@ -144,30 +147,29 @@ def main() -> None:
 
     train_loader = DataLoader(
         train_dataset,
-        batch_size=128,
+        batch_size=args.batch_size,
         shuffle=True,
-        num_workers=2,
-        pin_memory=(device.type == "cuda"),
+        num_workers=args.num_workers,
+        pin_memory=args.pin_memory and device.type == "cuda",
     )
     test_loader = DataLoader(
         test_dataset,
-        batch_size=256,
+        batch_size=args.batch_size * 2,
         shuffle=False,
-        num_workers=2,
-        pin_memory=(device.type == "cuda"),
+        num_workers=args.num_workers,
+        pin_memory=args.pin_memory and device.type == "cuda",
     )
 
     model = build_model(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
 
-    epochs = 1
-    for epoch in range(1, epochs + 1):
+    for epoch in range(1, args.epochs + 1):
         train_one_epoch(model, train_loader, criterion, optimizer, device, epoch)
 
     evaluate(model, test_loader, criterion, device)
-    
-    torch.save(model.state_dict(), "testModel/model.pth")
+
+    torch.save(model.state_dict(), args.model_name)
 
 
 if __name__ == "__main__":

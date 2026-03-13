@@ -144,12 +144,17 @@ def build_training_arguments(json_data: dict) -> list[str]:
     for key, val in json_data["hyperparameters"].items():
         run.append(f"--{key}")
         if isinstance(val, bool):
+            print(f"val: {val} is bool: {str(val).lower()}")
             run.append(str(val).lower())
         elif isinstance(val, (int, float)):
+            print(f"val: {val} is int or float")
             run.append(str(val))
         else:
             run.append(str(val))
 
+    print(f"run: {run}")
+    
+    
     return run
 
 
@@ -198,23 +203,22 @@ def run_command(user_uuid: str, metadata: str, python_files: list[UploadedTraini
         subprocess.run(build_command, check=True)
         
 
-        # run_args = build_training_arguments(json_data)
-        # docker_run_command = [
-        #     "docker",
-        #     "run",
-        #     "--rm",
-        #     "--gpus",
-        #     "all",
-        #     "-v",
-        #     f"{artifacts_folder}:/workspace/artifacts",
-        #     image_tag,
-        #     *run_args,
-        # ]
-        # print(f"Running Docker container with command: {docker_run_command}")
-        # subprocess.run(docker_run_command, check=True)
+        run_args = build_training_arguments(json_data)
+        use_cuda = str(json_data.get("use_cuda", False)).lower() == "true"
+        docker_run_command = ["docker", "run", "--rm"]
+        if use_cuda:
+            docker_run_command += ["--gpus", "all"]
+        docker_run_command += [
+            "-v",
+            f"{artifacts_folder}:/workspace/artifacts",
+            image_tag,
+            *run_args,
+        ]
+        print(f"Running Docker container with command: {docker_run_command}")
+        subprocess.run(docker_run_command, check=True)
 
-        # print("Model training completed")
-        # return True
+        print("Model training completed")
+        return True
     except subprocess.CalledProcessError as exc:
         print(f"Docker command failed with exit code {exc.returncode}: {exc.cmd}")
         return False

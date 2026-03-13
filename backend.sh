@@ -1,5 +1,9 @@
 #!/bin/bash
 
+echo "Deleting docker images"
+sudo docker system prune -a
+
+
 echo "Stopping anything running on port 8000..."
 
 PID=$(lsof -t -i:8000)
