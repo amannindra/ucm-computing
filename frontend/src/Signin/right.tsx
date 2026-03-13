@@ -1,5 +1,3 @@
-import logo from "../assets/ucmImage.jpg";
-import AI from "../assets/AI.jpg";
 import UcmLogo from "../assets/ucmlogo.png";
 
 export default function SigninRight() {

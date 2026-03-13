@@ -16,8 +16,15 @@ pwd
 
 
 echo "Activating virtual environment"
-# source venv/bin/activate <-- Linux
-source .venv/bin/activate # Mac
+
+if [ -d "venv" ]; then
+  source venv/bin/activate
+elif [ -d ".venv" ]; then
+  source .venv/bin/activate
+else
+  echo "No virtual environment found in backend/ (expected venv or .venv)"
+  exit 1
+fi
 
 # backend/.venv/bin/activate
 

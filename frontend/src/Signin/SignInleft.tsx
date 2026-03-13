@@ -36,7 +36,7 @@ export default function SigninLeft({
       return;
     }
     const res = await signIn(email, password);
-    if (res.success) {
+    if (res.success && res.user) {
       setUser(res.user);
       console.log(`user: ${res.user}`);
       navigate("/home");

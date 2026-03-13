@@ -1,12 +1,21 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createAccount } from "./backend";
+import { createAccount, signIn } from "./backend";
+
+type User = {
+  uuid: string;
+  name: string;
+  email: string;
+  password: string;
+};
 
 export default function CreateAccountLeft({
   setCreatePassword,
+  setUser,
 }: {
   createPassword: boolean;
   setCreatePassword: (createPassword: boolean) => void;
+  setUser: (user: User | null) => void;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -28,9 +37,16 @@ export default function CreateAccountLeft({
       return;
     }
     const res = await createAccount(name, email, password);
-      if (res?.success) {
-        console.log("Account created successfully");
-      navigate("/home");
+    if (res?.success) {
+      console.log("Account created successfully");
+      const signInRes = await signIn(email, password);
+      if (signInRes?.success && signInRes.user) {
+        setUser(signInRes.user);
+        navigate("/home");
+        return;
+      }
+      setCreatePassword(false);
+      navigate("/signin");
     } else {
       setError(res?.message || "Something went wrong.");
     }

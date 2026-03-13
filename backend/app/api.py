@@ -10,6 +10,21 @@ from . import sql_py
 from . import testsubprocess
 app = FastAPI()
 
+
+def normalize_api_path(path: str | None, default_path: str) -> str:
+    resolved_path = (path or default_path).strip()
+    if not resolved_path:
+        return default_path
+    if not resolved_path.startswith("/"):
+        return f"/{resolved_path}"
+    return resolved_path
+
+
+SIGNIN_API_URL = normalize_api_path(os.getenv("SIGNIN_API_URL"), "/signInAPI")
+CREATE_ACCOUNT_API_URL = normalize_api_path(
+    os.getenv("CREATE_ACCOUNT_API_URL"),
+    "/createAccountAPI",
+)
 origins = [
     "http://localhost:5173",
     "localhost:5173"
@@ -40,7 +55,7 @@ class Parameters(BaseModel):
 # UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
 print(os.getcwd())
 #UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
-UPLOAD_DIR = os.getenv("UPLOAD_DIR")
+UPLOAD_DIR = os.getenv("UPLOAD_DIR") or ""
 print(f"UPLOAD_DIR: {UPLOAD_DIR}")
 
 
@@ -57,8 +72,7 @@ async def websocket_endpoint(websocket: WebSocket):
 async def jsonPythonFile(metadata: str = Form(...), python_files: list[UploadFile] = File(...), user_uuid: str = Form(...)) -> dict:
     print("jsonPythonFile print")
     print(f"metadata: {metadata}")
-    print(f"user_uuid: {user_uuid}")
-    print(f"user_uuid type: {type(user_uuid)}")
+    print(f"user_uuid: ------{user_uuid}------")
     # json_data = json.loads(metadata)
     # user_upload_dir = os.path.join(UPLOAD_DIR, user_uuid)
     # os.makedirs(user_upload_dir, exist_ok=True)
@@ -74,10 +88,25 @@ async def jsonPythonFile(metadata: str = Form(...), python_files: list[UploadFil
     #     with open(file_path, "wb") as f:
     #         f.write(await file.read())
     
+    prepared_files: list[testsubprocess.UploadedTrainingFile] = []
+    for file in python_files:
+        if not file.filename:
+            return {"message": "Uploaded file is missing a filename.", "success": False}
+        prepared_files.append(
+            {
+                "filename": file.filename,
+                "content": await file.read(),
+            }
+        )
+        await file.close()
+
+    print(f"Prepared {len(prepared_files)} files for Docker build")
+
     # Run in background thread so FastAPI doesn't block while training runs
-    asyncio.get_event_loop().run_in_executor(
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(
         None,
-        partial(testsubprocess.run_command, user_uuid, metadata, python_files),
+        partial(testsubprocess.run_command, user_uuid, metadata, prepared_files),
     )
 
     return {"message": "Training started successfully.", "success": True}
@@ -126,8 +155,9 @@ class SignIn(BaseModel):
     email: str
     password: str
 
-@app.post("/signInAPI", tags=["signInAPI"])
+@app.post(SIGNIN_API_URL, tags=["signInAPI"])
 async def SignInAPI(signIn: SignIn) -> dict:
+    print("SignInAPI is called, signIn: ", signIn)
     sql = sql_py.SQL()
     sql.create_table()
     user = sql.get_user(signIn.email, signIn.password)
@@ -153,7 +183,7 @@ class CreateAccount(BaseModel):
     email: str
     password: str
 
-@app.post("/createAccountAPI", tags=["createAccountAPI"])
+@app.post(CREATE_ACCOUNT_API_URL, tags=["createAccountAPI"])
 async def CreateAccountAPI(createAccount: CreateAccount) -> dict:
     print(f"name: {createAccount.name}")
     print(f"email: {createAccount.email}")

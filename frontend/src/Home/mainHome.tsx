@@ -1,4 +1,3 @@
-import { Navigate } from "react-router-dom";
 import Panel from "./panel";
 import TrainModel from "./trainModel";
 import { useState, useEffect } from "react";
@@ -26,6 +25,8 @@ export default function MainHome({ user }: { user: User | null }) {
       navigate("/signin");
     }
   }, [user, navigate]);
+
+  console.log("user: ", user);
 
   return (
     <div className="flex w-full h-full">

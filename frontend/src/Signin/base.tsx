@@ -1,8 +1,14 @@
 import { useState } from "react";
 import SigninRight from "./right";
-import { Link } from "react-router-dom";
 import SigninLeft from "./SignInleft";
 import CreateAccountLeft from "./createAccountleft";
+
+type User = {
+  uuid: string;
+  name: string;
+  email: string;
+  password: string;
+};
 
 export default function Signin({
   setUser,

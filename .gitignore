@@ -26,6 +26,7 @@ dist-ssr
 .env
 
 testModel/data
+backend/train/*
 
 *.venv
 
