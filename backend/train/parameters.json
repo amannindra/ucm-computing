@@ -1,1 +1,0 @@
-{"pytorch_version": 2.1, "use_cuda": true, "model_name": "model.pth", "dependencies": "requirements.txt", "hyperparameters": {"epochs": 10, "learning_rate": 0.001, "batch_size": 128, "num_workers": 2, "pin_memory": true}}

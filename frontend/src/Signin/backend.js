@@ -16,6 +16,7 @@ export const createAccount = async (name, email, password) => {
 };
 
 export const signIn = async (email, password) => {
+  console.log("SignIn function in backend.js");
   if (!email || !password) {
     return { success: false, message: "Email and password are required." };
   }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { signIn } from "./backend";
 
@@ -22,11 +22,17 @@ export default function SigninLeft({
   const [password, setPassword] = useState("aa55vs28");
   const navigate = useNavigate();
 
+  useEffect(() => {
+    console.log(error);
+  }, [error]);
+
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log("HandleSubmit is called");
     e.preventDefault();
     setError("");
     if (!email || !password) {
       setError("Email and password are required.");
+      console.log("Email and password are required.");
       return;
     }
     const res = await signIn(email, password);
@@ -35,6 +41,7 @@ export default function SigninLeft({
       console.log(`user: ${res.user}`);
       navigate("/home");
     } else {
+      console.log("Getting User information failed");
       setError(res?.message || "Something went wrong.");
     }
   };

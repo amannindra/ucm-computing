@@ -1,7 +1,7 @@
-import { Link, Navigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import Panel from "./panel";
 import TrainModel from "./trainModel";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Default from "./default";
 import Storage from "./storage";
 import { useNavigate } from "react-router-dom";
@@ -20,10 +20,12 @@ export default function MainHome({ user }: { user: User | null }) {
   };
   console.log("mainHome");
 
-  if (!user) {
-    console.log("User is null, redirecting to login");
-    navigate("/signin");
-  }
+  useEffect(() => {
+    if (!user) {
+      console.log("User is null, redirecting to login");
+      navigate("/signin");
+    }
+  }, [user, navigate]);
 
   return (
     <div className="flex w-full h-full">
@@ -33,7 +35,7 @@ export default function MainHome({ user }: { user: User | null }) {
         </div>
         <div className="col-span-10 h-screen overflow-y-auto">
           {activeTab === "trainModel" ? (
-            <TrainModel />
+            <TrainModel user={user} />
           ) : activeTab === "storage" ? (
             <Storage />
           ) : (

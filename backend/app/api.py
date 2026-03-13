@@ -5,6 +5,7 @@ import os
 import uuid
 import json
 import asyncio
+from functools import partial
 from . import sql_py
 from . import testsubprocess
 app = FastAPI()
@@ -39,7 +40,7 @@ class Parameters(BaseModel):
 # UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
 print(os.getcwd())
 #UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
-UPLOAD_DIR = os.getenv("UPLOAD_DIR_MAC")
+UPLOAD_DIR = os.getenv("UPLOAD_DIR")
 print(f"UPLOAD_DIR: {UPLOAD_DIR}")
 
 
@@ -53,25 +54,31 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 @app.post("/jsonPythonFile", tags=["jsonPythonFile"])
-async def jsonPythonFile(metadata: str = Form(...), python_files: list[UploadFile] = File(...)) -> dict:
+async def jsonPythonFile(metadata: str = Form(...), python_files: list[UploadFile] = File(...), user_uuid: str = Form(...)) -> dict:
     print("jsonPythonFile print")
     print(f"metadata: {metadata}")
-    json_data = json.loads(metadata)
-    json_path = os.path.join(UPLOAD_DIR, "parameters.json")
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    with open(json_path, "w") as f:
-        json.dump(json_data, f)
-    print(f"json_data: {json_data}")
-    print(f"python_files: {python_files}")
+    print(f"user_uuid: {user_uuid}")
+    print(f"user_uuid type: {type(user_uuid)}")
+    # json_data = json.loads(metadata)
+    # user_upload_dir = os.path.join(UPLOAD_DIR, user_uuid)
+    # os.makedirs(user_upload_dir, exist_ok=True)
+    # json_path = os.path.join(user_upload_dir, "parameters.json")
+    # with open(json_path, "w") as f:
+    #     json.dump(json_data, f)
+    # print(f"json_data: {json_data}")
+    # print(f"python_files: {python_files}")
     # subprocess.run(["python", f"{UPLOAD_DIR}/test.py", "--epochs", json_data["hyperparameters"]["epochs"], "--learning_rate", json_data["hyperparameters"]["learning_rate"], "--batch_size", json_data["hyperparameters"]["batch_size"], "--num_workers", json_data["hyperparameters"]["num_workers"], "--pin_memory", json_data["hyperparameters"]["pin_memory"]])
-    for file in python_files:
-        print(f"file: {file}")
-        file_path = os.path.join(UPLOAD_DIR, file.filename)
-        with open(file_path, "wb") as f:
-            f.write(await file.read())
+    # for file in python_files:
+    #     print(f"file: {file}")
+    #     file_path = os.path.join(user_upload_dir, file.filename)
+    #     with open(file_path, "wb") as f:
+    #         f.write(await file.read())
     
     # Run in background thread so FastAPI doesn't block while training runs
-    asyncio.get_event_loop().run_in_executor(None, testsubprocess.run_command)
+    asyncio.get_event_loop().run_in_executor(
+        None,
+        partial(testsubprocess.run_command, user_uuid, metadata, python_files),
+    )
 
     return {"message": "Training started successfully.", "success": True}
 
@@ -126,13 +133,19 @@ async def SignInAPI(signIn: SignIn) -> dict:
     user = sql.get_user(signIn.email, signIn.password)
     if user is None:
         return {"message": "Invalid email or password.", "success": False, "userUUID": None}
+    user_data = {
+        "uuid": user[0],
+        "name": user[1],
+        "email": user[2],
+        "password": user[3],
+    }
     print(f"user: {user}")
     print(f"user type: {type(user)}")
     print(f"user uuid: {user[0]}")
     print(f"user name: {user[1]}")
     print(f"user email: {user[2]}")
     print(f"user password: {user[3]}")
-    return {"message": "Sign in successful.", "success": True, "user": user}
+    return {"message": "Sign in successful.", "success": True, "user": user_data}
 
 
 class CreateAccount(BaseModel):
@@ -154,4 +167,3 @@ async def CreateAccountAPI(createAccount: CreateAccount) -> dict:
     res = sql.get_users()
     print(res)
     return {"message": "Account created successfully.", "success": True}
-

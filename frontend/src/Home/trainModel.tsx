@@ -4,7 +4,14 @@ import { useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import Terminal, { ColorMode, TerminalOutput } from "react-terminal-ui";
 import { connectToWebSocket } from "./backend";
-export default function TrainModel() {
+
+type User = {
+  uuid: string;
+  name: string;
+  email: string;
+  password: string;
+};
+export default function TrainModel({ user }: { user: User | null }) {
   type EditorInstance = {
     getValue: () => string;
   };
@@ -121,30 +128,6 @@ export default function TrainModel() {
     }
   };
 
-  // const handleValidateJson = async () => {
-  //   validateJsonSimple();
-  // };
-
-  // const handleUploadPythonFile = async () => {
-  //   if (python_file.length === 0) {
-  //     // console.log("No Python files selected");
-  //     setpythonVisible("Python files not uploaded");
-  //     setValidatedPython(false);
-  //     return;
-  //   }
-
-  //   const response = await sendPythonFile(python_file);
-  //   if (response.error) {
-  //     console.log("Error uploading Python file");
-  //     setpythonVisible("Error uploading Python file");
-  //     setValidatedPython(false);
-  //     return;
-  //   }
-  //   setPythonFile([]);
-  //   setValidatedPython(true);
-  //   setpythonVisible("Python file uploaded successfully");
-  // };
-
   const handleTrainModel = async () => {
     appendTerminalLine("$ train-model");
     appendTerminalLine("Checking training configuration...");
@@ -173,9 +156,17 @@ export default function TrainModel() {
       "Sending request to backend at http://localhost:8000...",
     );
 
+    if (!user?.uuid) {
+      console.log("user.uuid is not set");
+      console.log("user: ", user);
+      appendTerminalLine("Training cancelled: user UUID is not set.");
+      return;
+    }
+    console.log("user.uuid: ", user.uuid);
     const response = await sendJsonPythonFile(
       JSON.parse(editorRef.current.getValue()),
       python_file,
+      user.uuid,
     );
 
     if (!response || response.error) {

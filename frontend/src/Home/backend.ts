@@ -12,9 +12,11 @@ type JsonParameters = {
 export const sendJsonPythonFile = async (
   JsonParameters: JsonParameters,
   python_files: File[],
+  user_uuid: string,
 ) => {
   const formData = new FormData();
-
+  console.log("user_uuid in backend.ts: ", user_uuid);
+  formData.append("user_uuid", user_uuid);
   formData.append("metadata", JSON.stringify(JsonParameters));
   const client_id = uuidv4();
   formData.append("client_id", client_id);
@@ -126,7 +128,8 @@ export const validateJson = (json: string) => {
   try {
     parsedJson = JSON.parse(json) as JsonParameters;
   } catch (error) {
-    return { val: false, reason: "Json Parse Error" };
+    console.error("Error parsing JSON", error);
+    return { val: false, reason: "Json Parse Error: " + error };
   }
 
   const all: Record<string, unknown> = {
