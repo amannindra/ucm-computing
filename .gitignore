@@ -33,3 +33,4 @@ backend/train/*
 backend/app/__pycache__/*
 backend/train/__pycache__/*
 backend/venv
+backend/app/__pycache__
