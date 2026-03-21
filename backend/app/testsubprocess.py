@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import TypedDict
 
 
-
-UPLOAD_DIR = os.getenv("UPLOAD_DIR") or ""
+UPLOAD_DIR = os.getenv("UPLOAD_DIR") or "/Users/amannindra/Projects/ucm-computing/backend/train"
+print(f"UPLOAD_DIR: {UPLOAD_DIR}")
 DOCKER_BASE_IMAGE = os.getenv(
     "TRAINING_DOCKER_BASE_IMAGE",
     "pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime",
@@ -17,17 +17,6 @@ DOCKER_BASE_IMAGE = os.getenv(
 print(f"DOCKER_BASE_IMAGE: {DOCKER_BASE_IMAGE}")
 
 CPU_BASE_IMAGE = "python:3.11-slim"
-TORCH_CPU_VERSION_MAP = {
-    "2.1": "2.1.0",
-    "2.2": "2.2.0",
-    "2.3": "2.3.0",
-    "2.4": "2.4.1",
-    "2.5": "2.5.1",
-    "2.6": "2.6.0",
-    "2.7": "2.7.0",
-    "2.8": "2.8.0",
-    "2.9": "2.9.0",
-}
 
 
 class UploadedTrainingFile(TypedDict):
@@ -51,7 +40,6 @@ def create_job_directories(user_uuid: str) -> tuple[str, str, str]:
     uuid_folder = os.path.join(UPLOAD_DIR, user_uuid)
     src_folder = os.path.join(uuid_folder, "src")
     artifacts_folder = os.path.join(uuid_folder, "artifacts")
-
     os.makedirs(src_folder, exist_ok=True)
     os.makedirs(artifacts_folder, exist_ok=True)
     return uuid_folder, src_folder, artifacts_folder
@@ -98,7 +86,6 @@ def validate_uploaded_inputs(
             "The following metadata files were not uploaded: "
             + ", ".join(missing_files)
         )
-
     return python_main, dependencies
 
 
@@ -113,6 +100,16 @@ ENTRYPOINT ["python", "/workspace/src/{python_main}"]
 """
     (Path(uuid_folder) / "Dockerfile").write_text(dockerfile_contents, encoding="utf-8")
 
+def write_dockerfile_no_cuda(uuid_folder: str, python_main: str, dependencies: str) -> None:
+    dockerfile_contents = f"""FROM {CPU_BASE_IMAGE}
+WORKDIR /workspace/artifacts
+COPY src/ /workspace/src/
+RUN python -m pip install --upgrade pip && \\
+    python -m pip install --no-cache-dir -r /workspace/src/{dependencies} \\
+    --trusted-host pypi.org --trusted-host files.pythonhosted.org
+ENTRYPOINT ["python", "/workspace/src/{python_main}"]
+"""
+    (Path(uuid_folder) / "Dockerfile").write_text(dockerfile_contents, encoding="utf-8")
 
 def write_dockerignore(uuid_folder: str) -> None:
     dockerignore_contents = """__pycache__/
@@ -193,7 +190,11 @@ def run_command(user_uuid: str, metadata: str, python_files: list[UploadedTraini
         print("validate_uploaded_inputs: ")
         print(f"python_main: {python_main}")
         print(f"dependencies: {dependencies}")
-        write_dockerfile(uuid_folder, python_main, dependencies)
+        use_cuda = str(json_data.get("use_cuda", False)).lower() == "true"
+        if use_cuda:
+            write_dockerfile(uuid_folder, python_main, dependencies)
+        else:
+            write_dockerfile_no_cuda(uuid_folder, python_main, dependencies)
         write_dockerignore(uuid_folder)
 
         image_tag = build_image_tag(user_uuid)
@@ -204,7 +205,6 @@ def run_command(user_uuid: str, metadata: str, python_files: list[UploadedTraini
         
 
         run_args = build_training_arguments(json_data)
-        use_cuda = str(json_data.get("use_cuda", False)).lower() == "true"
         docker_run_command = ["docker", "run", "--rm"]
         if use_cuda:
             docker_run_command += ["--gpus", "all"]
@@ -225,3 +225,40 @@ def run_command(user_uuid: str, metadata: str, python_files: list[UploadedTraini
     except Exception as exc:
         print(f"Training setup failed: {exc}")
         return False
+
+
+def load_local_training_files(source_dir: Path) -> list[UploadedTrainingFile]:
+    training_files: list[UploadedTrainingFile] = []
+    for file_path in sorted(source_dir.iterdir()):
+        if file_path.is_file():
+            training_files.append(
+                {
+                    "filename": file_path.name,
+                    "content": file_path.read_bytes(),
+                }
+            )
+    return training_files
+
+
+if __name__ == "__main__":
+    local_source_dir = Path(__file__).parent / "mac_testing"
+    local_metadata = {
+        "python_main": "test.py",
+        "pytorch_version": 2.4,
+        "use_cuda": False,
+        "model_name": "model.pth",
+        "dependencies": "requirements.txt",
+        "hyperparameters": {
+            "epochs": 1,
+            "learning_rate": 0.001,
+            "batch_size": 128,
+            "num_workers": 2,
+            "pin_memory": False,
+        },
+    }
+    local_python_files = load_local_training_files(local_source_dir)
+    run_command(
+        "mac-local-test",
+        json.dumps(local_metadata),
+        local_python_files,
+    )
