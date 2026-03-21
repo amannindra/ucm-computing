@@ -21,9 +21,9 @@ export default function Panel() {
           UCM Computing
         </p>
         <h1 className="mt-3 text-2xl font-bold text-white">Workspace</h1>
-        <p className="mt-2 text-sm text-gray-300">
+        {/* <p className="mt-2 text-sm text-gray-300">
           Switch between model training and storage management.
-        </p>
+        </p> */}
       </div>
 
       <div className="flex flex-col gap-4 p-4">

@@ -6,10 +6,24 @@ import uuid
 import json
 import asyncio
 from functools import partial
+from minio import Minio
 from . import sql_py
 from . import testsubprocess
 app = FastAPI()
 
+USER_TABLE_COLUMNS = [
+    "uuid TEXT PRIMARY KEY",
+    "name TEXT NOT NULL",
+    "email TEXT NOT NULL UNIQUE",
+    "password TEXT NOT NULL",
+]
+USER_COLUMNS = ["uuid", "name", "email", "password"]
+
+minio_client = Minio(
+    endpoint=os.getenv("MINIO_ENDPOINT"),
+    access_key=os.getenv("MINIO_ACCESS_KEY"),
+    secret_key=os.getenv("MINIO_SECRET_KEY"),
+)
 
 def normalize_api_path(path: str | None, default_path: str) -> str:
     resolved_path = (path or default_path).strip()
@@ -39,7 +53,6 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-
 @app.get("/", tags=["root"])
 async def read_root() -> dict:
     return {"message": "Welcome to UCM Computing."}
@@ -52,9 +65,6 @@ class Parameters(BaseModel):
     dependencies: str
     hyperparameters: dict
 
-# UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
-print(os.getcwd())
-#UPLOAD_DIR = "/home/aman/Projects/ucm-computing/backend/train"
 UPLOAD_DIR = os.getenv("UPLOAD_DIR") or ""
 print(f"UPLOAD_DIR: {UPLOAD_DIR}")
 
@@ -159,23 +169,29 @@ class SignIn(BaseModel):
 async def SignInAPI(signIn: SignIn) -> dict:
     print("SignInAPI is called, signIn: ", signIn)
     sql = sql_py.SQL()
-    sql.create_table()
-    user = sql.get_user(signIn.email, signIn.password)
-    if user is None:
-        return {"message": "Invalid email or password.", "success": False, "userUUID": None}
-    user_data = {
-        "uuid": user[0],
-        "name": user[1],
-        "email": user[2],
-        "password": user[3],
-    }
-    print(f"user: {user}")
-    print(f"user type: {type(user)}")
-    print(f"user uuid: {user[0]}")
-    print(f"user name: {user[1]}")
-    print(f"user email: {user[2]}")
-    print(f"user password: {user[3]}")
-    return {"message": "Sign in successful.", "success": True, "user": user_data}
+    try:
+        sql.create_table("users", USER_TABLE_COLUMNS)
+        user = sql.get_data("users", USER_COLUMNS, "email", signIn.email)
+        if user is None:
+            return {"message": "Invalid email or password.", "success": False, "userUUID": None}
+        user_data = {
+            "uuid": user[0],
+            "name": user[1],
+            "email": user[2],
+            "password": user[3],
+        }
+        print(f"user: {user}")
+        print(f"user type: {type(user)}")
+        print(f"user uuid: {user[0]}")
+        print(f"user name: {user[1]}")
+        print(f"user email: {user[2]}")
+        print(f"user password: {user[3]}")
+        return {"message": "Sign in successful.", "success": True, "user": user_data}
+    finally:
+        sql.close()
+
+
+
 
 
 class CreateAccount(BaseModel):
@@ -189,11 +205,39 @@ async def CreateAccountAPI(createAccount: CreateAccount) -> dict:
     print(f"email: {createAccount.email}")
     print(f"password: {createAccount.password}")
     id = str(uuid.uuid4())
+    id = id.replace("-", "")
     sql = sql_py.SQL()
-    sql.create_table()
-    if sql.check_user_exists(createAccount.email):
-        return {"message": "Email already exists.", "success": False}
-    sql.insert_user(id, createAccount.name, createAccount.email, createAccount.password)
-    res = sql.get_users()
-    print(res)
-    return {"message": "Account created successfully.", "success": True}
+    try:
+        sql.create_table("users", USER_TABLE_COLUMNS)
+        if sql.check_data_exists("users", "email", createAccount.email):
+            return {"message": "Email already exists.", "success": False}
+        sql.insert_data(
+            "users",
+            USER_COLUMNS,
+            [id, createAccount.name, createAccount.email, createAccount.password],
+        )
+        res = sql.get_data("users", USER_COLUMNS)
+        print(f"results after createAccount: {res}")
+        return {"message": "Account created successfully.", "success": True}
+    finally:
+        sql.close()
+
+
+
+@app.get("create-bucket", tags=["create-bucket"])
+async def CreateBucket(email: str, bucket_name: str) -> dict:
+    
+    
+    
+    
+    print(f"bucket_name: {bucket_name}")
+    minio_client.make_bucket(bucket_name)
+    print(f"bucket created successfully")
+    
+    
+    return {"message": "Bucket created successfully.", "success": True}
+
+# @app.get("/buckets", tags=["buckets"])
+# async def GetBuckets() -> dict:
+#     buckets = minio_client.list_buckets()
+#     return {"message": "Buckets fetched successfully.", "success": True, "buckets": buckets}
