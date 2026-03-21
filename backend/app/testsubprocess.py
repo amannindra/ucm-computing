@@ -140,6 +140,7 @@ def build_training_arguments(json_data: dict) -> list[str]:
 
     run = ["--use_cuda", str(json_data["use_cuda"]).lower()]
     run += ["--model_name", model_output]
+    
 
     for key, val in json_data["hyperparameters"].items():
         run.append(f"--{key}")
@@ -205,7 +206,7 @@ def run_command(user_uuid: str, metadata: str, python_files: list[UploadedTraini
 
         run_args = build_training_arguments(json_data)
         use_cuda = str(json_data.get("use_cuda", False)).lower() == "true"
-        docker_run_command = ["docker", "run", "--rm"]
+        docker_run_command = ["docker", "run", "--rm", "--cpus=0.5"]
         if use_cuda:
             docker_run_command += ["--gpus", "all"]
         docker_run_command += [

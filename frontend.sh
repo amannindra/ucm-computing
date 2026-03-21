@@ -1,10 +1,10 @@
 
-PID=$(lsof -t -i:5173)
+# PID=$(lsof -t -i:5173)
 
-if [ ! -z "$PID" ]; then
-  kill -9 $PID
-  echo "Killed process $PID"
-fi
+# if [ ! -z "$PID" ]; then
+#   kill -9 $PID
+#   echo "Killed process $PID"
+# fi
 
 cd frontend
 npm run dev

@@ -25,10 +25,11 @@ CREATE_ACCOUNT_API_URL = normalize_api_path(
     os.getenv("CREATE_ACCOUNT_API_URL"),
     "/createAccountAPI",
 )
-origins = [
-    "http://localhost:5173",
-    "localhost:5173"
-]
+# origins = [
+#     "http://localhost:5173",
+#     "localhost:5173"
+# ]
+origins = ["*"]
 
 
 app.add_middleware(
