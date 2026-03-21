@@ -1,6 +1,13 @@
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
+type WebSocketCallbacks = {
+  onClose?: () => void;
+  onError?: () => void;
+  onMessage?: (message: string) => void;
+  onOpen?: () => void;
+};
+
 type JsonParameters = {
   python_main: string;
   pytorch_version: number;
@@ -41,13 +48,29 @@ export const sendJsonPythonFile = async (
   }
 };
 
-export const connectToWebSocket = async () => {
+export const connectToWebSocket = (callbacks: WebSocketCallbacks = {}) => {
   const ws = new WebSocket("ws://localhost:8000/ws");
   ws.onmessage = (event) => {
     console.log("Received message: ", event.data);
+    callbacks.onMessage?.(String(event.data));
   };
   ws.onopen = () => {
     console.log("WebSocket connected");
+    callbacks.onOpen?.();
+  };
+  ws.onerror = () => {
+    console.log("WebSocket error");
+    callbacks.onError?.();
+  };
+  ws.onclose = () => {
+    console.log("WebSocket closed");
+    callbacks.onClose?.();
+  };
+
+  return () => {
+    if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+      ws.close();
+    }
   };
 };
 
