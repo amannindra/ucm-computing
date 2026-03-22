@@ -18,9 +18,9 @@ export default function Signin({
   const [createPassword, setCreatePassword] = useState(false);
 
   return (
-    <div className="flex w-full h-full">
-      <div className="h-screen w-full grid grid-cols-12">
-        <div className="col-span-3 justify-center">
+    <div className="min-h-screen w-full bg-[radial-gradient(circle_at_top_left,_rgba(234,179,8,0.12),_transparent_26%),linear-gradient(135deg,_#111111_0%,_#181818_48%,_#101010_100%)]">
+      <div className="grid min-h-screen w-full lg:grid-cols-[minmax(380px,460px)_1fr]">
+        <div className="flex items-center justify-center border-r border-gray-800/80 px-6 py-8 lg:px-10">
           {createPassword ? (
             <CreateAccountLeft
               createPassword={createPassword}
@@ -34,12 +34,10 @@ export default function Signin({
               setUser={setUser}
             />
           )}
-        </div>{" "}
-        {/* ~33% */}
-        <div className="col-span-9">
+        </div>
+        <div className="hidden lg:block">
           <SigninRight />
-        </div>{" "}
-        {/* ~67% */}
+        </div>
       </div>
     </div>
   );

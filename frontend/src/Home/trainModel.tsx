@@ -1,59 +1,16 @@
-import { validateJson, sendJsonPythonFile, connectToWebSocket } from "./backend";
-import data from "./data.json";
-import { useEffect, useRef, useState } from "react";
-import Editor from "@monaco-editor/react";
-
-type User = {
-  uuid: string;
-  name: string;
-  email: string;
-  password: string;
-};
-
-type EditorInstance = {
-  getValue: () => string;
-};
-
-type ValidationResult = {
-  val: boolean;
-  reason: string;
-};
-
-type TerminalTone = "command" | "error" | "info" | "socket" | "success";
-
-type TerminalLine = {
-  id: number;
-  text: string;
-  time: string;
-  tone: TerminalTone;
-};
-
-const initialTerminalMessage =
-  'Ready. Upload Python files and click "Train Model" to start.';
-
-function timestamp() {
-  return new Date().toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
-function lineToneClass(tone: TerminalTone) {
-  if (tone === "success") {
-    return "text-green-400";
-  }
-  if (tone === "error") {
-    return "text-red-400";
-  }
-  if (tone === "command") {
-    return "text-yellow-300";
-  }
-  if (tone === "socket") {
-    return "text-cyan-300";
-  }
-  return "text-gray-200";
-}
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { connectToWebSocket, sendJsonPythonFile, validateJson } from "./backend";
+import ConfigurationPanel from "./components/ConfigurationPanel";
+import TrainingAssetsPanel from "./components/TrainingAssetsPanel";
+import TrainingConsole from "./components/TrainingConsole";
+import type {
+  EditorInstance,
+  TerminalLine,
+  TerminalTone,
+  User,
+  ValidationResult,
+} from "./trainModelTypes";
+import { initialTerminalMessage, timestamp } from "./trainModelUtils";
 
 export default function TrainModel({ user }: { user: User | null }) {
   const editorRef = useRef<EditorInstance | null>(null);
@@ -120,7 +77,7 @@ export default function TrainModel({ user }: { user: User | null }) {
     return { val: true, reason: "Json is valid" };
   };
 
-  function handleEditorChange(value: string | undefined) {
+  const handleEditorChange = (value: string | undefined) => {
     if (!value) {
       setValidatedJson(false);
       setReasonVisible("Json Parse Error");
@@ -135,10 +92,10 @@ export default function TrainModel({ user }: { user: User | null }) {
       setValidatedJson(false);
       setReasonVisible(reason);
     }
-  }
+  };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files ?? []);
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(event.target.files ?? []);
 
     if (selectedFiles.length === 0) {
       return;
@@ -158,7 +115,7 @@ export default function TrainModel({ user }: { user: User | null }) {
     newFiles.forEach((file) =>
       appendTerminalLine(`Attached file: ${file.name}`, "info"),
     );
-    e.target.value = "";
+    event.target.value = "";
   };
 
   const handleTrainModel = async () => {
@@ -214,7 +171,7 @@ export default function TrainModel({ user }: { user: User | null }) {
     appendResponseToTerminal(response);
   };
 
-  function handleEditorWillMount(monaco: any) {
+  const handleEditorWillMount = (monaco: any) => {
     monaco.editor.defineTheme("customDarkTheme", {
       base: "vs-dark",
       inherit: true,
@@ -223,11 +180,11 @@ export default function TrainModel({ user }: { user: User | null }) {
         "editor.background": "#242424",
       },
     });
-  }
+  };
 
-  function handleEditorDidMount(editor: EditorInstance) {
+  const handleEditorDidMount = (editor: EditorInstance) => {
     editorRef.current = editor;
-  }
+  };
 
   const handleDeleteFile = (fileName: string) => {
     setFileNames((current) => current.filter((name) => name !== fileName));
@@ -264,10 +221,10 @@ export default function TrainModel({ user }: { user: User | null }) {
   }, [terminalLines]);
 
   return (
-    <div className="flex flex-col h-full w-full border-l-2 border-r-2 border-gray-200 overflow-y-auto">
+    <div className="flex h-full w-full flex-col overflow-y-auto border-l-2 border-r-2 border-gray-200">
       <div className="flex flex-col">
         <div className="flex items-center justify-center">
-          <div className="flex flex-col p-10 justify-center w-[92%] gap-6">
+          <div className="flex w-[92%] flex-col justify-center gap-6 p-10">
             <div className="flex flex-col gap-2">
               <h1 className="text-3xl font-bold">Train Model Configuration</h1>
               <p className="text-sm text-gray-300">
@@ -277,192 +234,28 @@ export default function TrainModel({ user }: { user: User | null }) {
             </div>
 
             <div className="grid gap-6 xl:grid-cols-[340px_minmax(0,1fr)]">
-              <div className="border border-gray-600 rounded-md overflow-hidden bg-[#1f1f1f]">
-                <div className="border-b border-gray-600 p-4">
-                  <h2 className="text-xl font-bold">Training Assets</h2>
-                  <p className="text-sm text-gray-300 mt-1">
-                    Attach one or more Python files before starting a job.
-                  </p>
-                </div>
+              <TrainingAssetsPanel
+                fileNames={fileNames}
+                onDeleteFile={handleDeleteFile}
+                onFileChange={handleFileChange}
+              />
 
-                <div className="p-4 space-y-4">
-                  <label
-                    htmlFor="dropzone-file"
-                    className="flex flex-col items-center justify-center w-full h-48 border border-dashed border-gray-500 rounded-md cursor-pointer hover:bg-[#2a2a2a]"
-                  >
-                    <div className="flex flex-col items-center justify-center text-center px-4">
-                      <svg
-                        aria-hidden="true"
-                        className="w-8 h-8 mb-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M15 17h3a3 3 0 0 0 0-6h-.025a5.56 5.56 0 0 0 .025-.5A5.5 5.5 0 0 0 7.207 9.021C7.137 9.017 7.071 9 7 9a4 4 0 1 0 0 8h2.167M12 19v-9m0 0-2 2m2-2 2 2"
-                          stroke="currentColor"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                        />
-                      </svg>
-                      <p className="text-sm font-semibold">Upload Python Files</p>
-                      <p className="text-xs text-gray-400 mt-2">
-                        Click here to attach `.py` or `.txt` files
-                      </p>
-                    </div>
-                    <input
-                      id="dropzone-file"
-                      type="file"
-                      accept=".py, .txt"
-                      className="hidden"
-                      multiple
-                      onChange={handleFileChange}
-                    />
-                  </label>
-
-                  <div className="rounded-md border border-gray-600 bg-[#242424] p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-bold uppercase tracking-wide text-gray-300">
-                        Attached Files
-                      </h3>
-                      <span className="text-xs text-gray-400">
-                        {fileNames.length} selected
-                      </span>
-                    </div>
-
-                    {fileNames.length > 0 ? (
-                      <div className="flex flex-col gap-2 mt-4">
-                        {fileNames.map((fileName) => (
-                          <div
-                            className="flex items-center justify-between rounded-md border border-gray-600 px-3 py-2"
-                            key={fileName}
-                          >
-                            <p className="text-sm text-gray-200 truncate">
-                              {fileName}
-                            </p>
-                            <button
-                              className="text-sm text-gray-300 hover:text-white"
-                              onClick={() => handleDeleteFile(fileName)}
-                              type="button"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-400 mt-4">
-                        No files attached yet.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="border border-gray-600 rounded-md overflow-hidden bg-[#1f1f1f]">
-                <div className="border-b border-gray-600 p-4">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                      <h2 className="text-xl font-bold">Configuration JSON</h2>
-                      <p className="text-sm text-gray-300 mt-1">
-                        Review the training parameters before launching the job.
-                      </p>
-                    </div>
-
-                    <div
-                      className={`rounded-md border px-3 py-2 text-sm ${
-                        validatedJson
-                          ? "border-green-700 text-green-400"
-                          : "border-red-700 text-red-400"
-                      }`}
-                    >
-                      {reasonVisible}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4">
-                  <div className="border border-gray-600 rounded-md overflow-hidden">
-                    <Editor
-                      height="420px"
-                      language="json"
-                      theme="customDarkTheme"
-                      value={JSON.stringify(data, null, 2)}
-                      beforeMount={handleEditorWillMount}
-                      onMount={handleEditorDidMount}
-                      onChange={handleEditorChange}
-                      options={{
-                        minimap: { enabled: false },
-                        scrollBeyondLastLine: false,
-                        padding: { top: 16, bottom: 16 },
-                        scrollbar: {
-                          vertical: "auto",
-                          horizontal: "auto",
-                        },
-                        fontSize: 16,
-                        lineHeight: 26,
-                        fontWeight: "500",
-                      }}
-                    />
-                  </div>
-
-                  <div className="flex flex-row flex-wrap gap-2 mt-4">
-                    <button
-                      className="border-2 border-white text-white px-4 py-2 rounded-md hover:bg-gray-200 hover:text-black"
-                      onClick={handleTrainModel}
-                      type="button"
-                    >
-                      Train Model
-                    </button>
-                    <button
-                      className="border border-white text-white px-4 py-2 rounded-md hover:bg-gray-200 hover:text-black"
-                      onClick={resetTerminal}
-                      type="button"
-                    >
-                      Clear Console
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <ConfigurationPanel
+                handleEditorChange={handleEditorChange}
+                handleEditorDidMount={handleEditorDidMount}
+                handleEditorWillMount={handleEditorWillMount}
+                onClearConsole={resetTerminal}
+                onTrainModel={() => void handleTrainModel()}
+                reasonVisible={reasonVisible}
+                validatedJson={validatedJson}
+              />
             </div>
 
-            <div className="border border-gray-600 rounded-md overflow-hidden bg-[#101010]">
-              <div className="flex items-center justify-between gap-4 border-b border-gray-700 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-2">
-                    <span className="h-3 w-3 rounded-full bg-red-500" />
-                    <span className="h-3 w-3 rounded-full bg-yellow-400" />
-                    <span className="h-3 w-3 rounded-full bg-green-500" />
-                  </div>
-                  <p className="text-sm font-bold">Training Console</p>
-                </div>
-
-                <div className="flex items-center gap-3 text-xs">
-                  <span
-                    className={`rounded-full px-3 py-1 ${
-                      socketState === "connected"
-                        ? "bg-green-900/40 text-green-400"
-                        : socketState === "connecting"
-                          ? "bg-yellow-900/40 text-yellow-300"
-                          : "bg-red-900/40 text-red-400"
-                    }`}
-                  >
-                    {socketState}
-                  </span>
-                </div>
-              </div>
-
-              <div className="h-[280px] overflow-y-auto bg-[#0b0b0b] px-4 py-4 font-mono text-sm">
-                {terminalLines.map((line) => (
-                  <div className="flex gap-3 py-1" key={line.id}>
-                    <span className="w-20 shrink-0 text-gray-500">{line.time}</span>
-                    <span className={lineToneClass(line.tone)}>{line.text}</span>
-                  </div>
-                ))}
-                <div ref={terminalBottomRef} />
-              </div>
-            </div>
+            <TrainingConsole
+              socketState={socketState}
+              terminalBottomRef={terminalBottomRef}
+              terminalLines={terminalLines}
+            />
           </div>
         </div>
       </div>

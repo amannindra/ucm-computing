@@ -35,12 +35,16 @@ export default function App() {
         <Route
           path="/home"
           element={
-            user ? <MainHome user={user} /> : <Navigate to="/signin" replace />
+            user ? (
+              <MainHome user={user} onLogout={() => handleSetUser(null)} />
+            ) : (
+              <Navigate to="/signin" replace />
+            )
           }
         >
           <Route index element={<Navigate to="/home/train-model" replace />} />
           <Route path="train-model" element={<TrainModel user={user} />} />
-          <Route path="storage" element={<StoragePage />} />
+          <Route path="storage" element={<StoragePage user={user!} />} />
         </Route>
       </Routes>
     </BrowserRouter>

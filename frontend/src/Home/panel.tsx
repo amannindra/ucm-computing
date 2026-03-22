@@ -11,9 +11,14 @@ const navItems = [
     title: "Storage System",
     to: "/home/storage",
   },
+  {
+    description: "Access the terminal for running commands.",
+    title: "Terminal",
+    to: "/home/terminal",
+  },
 ];
 
-export default function Panel() {
+export default function Panel({ onLogout }: { onLogout: () => void }) {
   return (
     <div className="flex h-full w-full flex-col border-r-2 border-gray-200 bg-[#1a1a1a]">
       <div className="border-b-2 border-gray-200 px-5 py-6">
@@ -53,20 +58,27 @@ export default function Panel() {
                     {isActive ? "Open" : "View"}
                   </span>
                 </div>
-                <p className="text-sm text-gray-300">{item.description}</p>
+                {/* <p className="text-sm text-gray-300">{item.description}</p> */}
               </div>
             )}
           </NavLink>
         ))}
       </div>
 
-      <div className="mt-auto border-t border-gray-700 px-4 py-4">
-        <div className="rounded-md border border-gray-600 bg-[#1f1f1f] px-4 py-3">
+      <div className="mt-auto border-gray-700 px-4 py-4">
+        {/* <div className="rounded-md border border-gray-600 bg-[#1f1f1f] px-4 py-3">
           <p className="text-xs font-bold uppercase tracking-wide text-gray-400">
             Environment
           </p>
           <p className="mt-2 text-sm text-gray-200">Internal AI dashboard</p>
-        </div>
+        </div> */}
+        <button
+          className="mt-4 w-full rounded-md border border-red-700 px-4 py-3 text-left text-sm font-bold text-red-300 transition hover:bg-red-900/20 hover:text-red-200"
+          onClick={onLogout}
+          type="button"
+        >
+          Log Out
+        </button>
       </div>
     </div>
   );
