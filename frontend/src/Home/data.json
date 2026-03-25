@@ -5,7 +5,7 @@
   "model_name": "model.pth",
   "dependencies": "requirements.txt",
   "hyperparameters": {
-    "epochs": 10,
+    "epochs": 1,
     "learning_rate": 0.001,
     "batch_size": 128,
     "num_workers": 2,

@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
-import { createBucket, getUserBuckets, renameBucket } from "./backend";
+import { createBucket, deleteBucket, getUserBuckets, renameBucket } from "./backend";
 import BucketDetailsPanel from "./components/BucketDetailsPanel";
 import BucketListPanel from "./components/BucketListPanel";
 import RenameBucketModal from "./components/RenameBucketModal";
 import { buildBucketRecords } from "./storageData";
 import { getFolderItems } from "./storageFolders";
-import type { BucketRecord, StatusTone, StorageItem, User } from "./types";
+import type {
+  BucketRecord,
+  BucketSummary,
+  StatusTone,
+  StorageItem,
+  User,
+} from "./types";
 
 export default function StoragePage({ user }: { user: User }) {
   const [buckets, setBuckets] = useState<BucketRecord[]>([]);
@@ -17,7 +23,7 @@ export default function StoragePage({ user }: { user: User }) {
   const [renameValue, setRenameValue] = useState("");
   const [isLoadingBuckets, setIsLoadingBuckets] = useState(true);
   const [isCreatingBucket, setIsCreatingBucket] = useState(false);
-  const [isDeletingBucket] = useState(false);
+  const [isDeletingBucket, setIsDeletingBucket] = useState(false);
   const [isRenamingBucket, setIsRenamingBucket] = useState(false);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
@@ -28,8 +34,11 @@ export default function StoragePage({ user }: { user: User }) {
     setStatusTone(tone);
   };
 
-  const syncBuckets = (bucketNames: string[], preferredBucketName?: string) => {
-    const nextBuckets = buildBucketRecords(bucketNames);
+  const syncBuckets = (
+    bucketSummaries: BucketSummary[],
+    preferredBucketName?: string,
+  ) => {
+    const nextBuckets = buildBucketRecords(bucketSummaries);
     setBuckets(nextBuckets);
     setSelectedBucketName((currentBucketName) => {
       const prioritizedBucketName =
@@ -75,7 +84,7 @@ export default function StoragePage({ user }: { user: User }) {
     buckets[0] ??
     null;
 
-  useEffect(() => {
+  useEffect(() => { 
     setActiveFolderName(null);
     setObjectSearch("");
   }, [selectedBucket?.name]);
@@ -139,6 +148,22 @@ export default function StoragePage({ user }: { user: User }) {
     setIsRenamingBucket(false);
   };
 
+  const handleDeleteBucket = async () => {
+    if (!selectedBucket?.name) {
+      return;
+    }
+
+    setIsDeletingBucket(true);
+    const response = await deleteBucket(user.email, selectedBucket.name);
+    if (response.success) {
+      setStatus(response.message, "success");
+      await loadBuckets();
+    } else {
+      setStatus(response.message, "error");
+    }
+    setIsDeletingBucket(false);
+  };
+
   const renameDisabled =
     !bucketBeingRenamedName ||
     !renameValue.trim() ||
@@ -171,7 +196,8 @@ export default function StoragePage({ user }: { user: User }) {
                 </button> 
                 <button
                   className="rounded-md border-2 border-white px-4 py-2 text-white hover:bg-gray-200 hover:text-black disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={isDeletingBucket}
+                  disabled={isDeletingBucket || !selectedBucket}
+                  onClick={() => void handleDeleteBucket()}
                   type="button"
                 >
                   {isDeletingBucket ? "Deleting..." : "Delete Bucket"}

@@ -3,15 +3,13 @@ uvicorn
 python-dotenv
 pydantic
 minio
-flask
-flask-cors
+# flask
+# flask-cors
 python-multipart
-uvicorn
-torch
-torchvision
-tqdm
+# torch
+# torchvision
+# tqdm
 argparse
 websockets
 asyncio
 dotenv
-uvicorn

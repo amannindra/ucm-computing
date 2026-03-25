@@ -19,4 +19,9 @@ export type BucketRecord = {
   items: StorageItem[];
 };
 
+export type BucketSummary = {
+  name: string;
+  createdAt: string;
+};
+
 export type StatusTone = "error" | "success";

@@ -7,7 +7,9 @@ import uuid
 import json
 import asyncio
 from functools import partial
+from datetime import datetime
 from minio import Minio
+from urllib.parse import urlsplit
 # from minio.args import SourceObject
 from . import sql_py
 from . import testsubprocess
@@ -25,15 +27,44 @@ USER_BUCKET_TABLE_COLUMNS = [
     "id INTEGER PRIMARY KEY AUTOINCREMENT",
     "user_uuid TEXT NOT NULL",
     "bucket_name TEXT NOT NULL UNIQUE",
+    "created_at TEXT NOT NULL DEFAULT ''",
 ]
-USER_BUCKET_COLUMNS = ["user_uuid", "bucket_name"]
+USER_BUCKET_COLUMNS = ["user_uuid", "bucket_name", "created_at"]
 BUCKET_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$")
 
+
+database_db = "data.db"
+
+def resolve_minio_endpoint(raw_endpoint: str | None) -> tuple[str, bool]:
+    endpoint = (raw_endpoint or "127.0.0.1:9000").strip()
+    secure_override = os.getenv("MINIO_SECURE")
+    secure = (
+        secure_override.strip().lower() in {"1", "true", "yes", "on"}
+        if secure_override
+        else False
+    )
+
+    if "://" in endpoint:
+        parsed_endpoint = urlsplit(endpoint)
+        endpoint = parsed_endpoint.netloc or parsed_endpoint.path
+        if secure_override is None:
+            secure = parsed_endpoint.scheme == "https"
+        if parsed_endpoint.path not in {"", "/"}:
+            print(
+                f"MINIO_ENDPOINT contains path '{parsed_endpoint.path}'. "
+                f"Using '{endpoint}' instead."
+            )
+
+    endpoint = endpoint.rstrip("/")
+    return endpoint, secure
+
+
+MINIO_ENDPOINT, MINIO_SECURE = resolve_minio_endpoint(os.getenv("MINIO_ENDPOINT"))
 minio_client = Minio(
-    endpoint=os.getenv("MINIO_ENDPOINT"),
+    endpoint=MINIO_ENDPOINT,
     access_key=os.getenv("MINIO_ACCESS_KEY"),
     secret_key=os.getenv("MINIO_SECRET_KEY"),
-    secure=False,
+    secure=MINIO_SECURE,
 )
 
 def normalize_api_path(path: str | None, default_path: str) -> str:
@@ -215,6 +246,8 @@ async def CreateAccountAPI(createAccount: CreateAccount) -> dict:
 
 def ensure_bucket_table(sql: sql_py.SQL) -> None:
     sql.create_table("user_buckets", USER_BUCKET_TABLE_COLUMNS)
+    if "created_at" not in sql.get_table_columns("user_buckets"):
+        sql.add_column("user_buckets", "created_at", "TEXT NOT NULL DEFAULT ''")
     sql.create_index("idx_user_buckets_user_uuid", "user_buckets", ["user_uuid"])
 
 
@@ -222,6 +255,10 @@ def build_bucket_name(user_uuid: str, existing_bucket_count: int) -> str:
     # MinIO bucket names must be DNS-compatible, so use lowercase and hyphens only.
     safe_user_uuid = user_uuid.lower()
     return f"user-{safe_user_uuid[:12]}-bucket-{existing_bucket_count}"
+
+
+def get_current_bucket_date() -> str:
+    return datetime.now().strftime("%B %d, %Y")
 
 
 def normalize_bucket_name(bucket_name: str) -> str:
@@ -237,6 +274,22 @@ def normalize_bucket_name(bucket_name: str) -> str:
 def get_user_bucket_names(sql: sql_py.SQL, user_uuid: str) -> list[str]:
     bucket_rows = sql.get_rows("user_buckets", ["bucket_name"], "user_uuid", user_uuid)
     return [row[0] for row in bucket_rows]
+
+
+def get_user_bucket_records(sql: sql_py.SQL, user_uuid: str) -> list[dict[str, str]]:
+    bucket_rows = sql.get_rows(
+        "user_buckets",
+        ["bucket_name", "created_at"],
+        "user_uuid",
+        user_uuid,
+    )
+    return [
+        {
+            "name": row[0],
+            "created_at": row[1] or get_current_bucket_date(),
+        }
+        for row in bucket_rows
+    ]
 
 
 # def copy_bucket_objects(source_bucket_name: str, destination_bucket_name: str) -> list[str]:
@@ -272,12 +325,6 @@ class CreateBucket(BaseModel):
     email: str
 
 
-class RenameBucket(BaseModel):
-    email: str
-    current_bucket_name: str
-    new_bucket_name: str
-
-
 @app.post("/create-bucket", tags=["create-bucket"])
 async def CreateBucketAPI(createBucket: CreateBucket) -> dict:
     sql = sql_py.SQL()
@@ -304,22 +351,29 @@ async def CreateBucketAPI(createBucket: CreateBucket) -> dict:
         while sql.check_data_exists("user_buckets", "bucket_name", bucket_name):
             bucket_sequence += 1
             bucket_name = build_bucket_name(user_uuid, bucket_sequence)
+        created_at = get_current_bucket_date()
 
         # minio_client.make_bucket(bucket_name)
-        sql.insert_data("user_buckets", USER_BUCKET_COLUMNS, [user_uuid, bucket_name])
+        sql.insert_data(
+            "user_buckets",
+            USER_BUCKET_COLUMNS,
+            [user_uuid, bucket_name, created_at],
+        )
         print(f"bucket created successfully: {bucket_name}")
         return {
             "message": "Bucket created successfully.",
             "success": True,
             "bucket_name": bucket_name,
+            "created_at": created_at,
             "user_uuid": user_uuid,
         }
     finally:
         sql.close()
 
 
-@app.get("/user-buckets", tags=["user-buckets"])
+@app.get("/get-user-buckets", tags=["get-user-buckets"])
 async def GetUserBuckets(email: str) -> dict:
+    
     sql = sql_py.SQL()
     try:
         if not sql.check_if_table_exists("users"):
@@ -331,16 +385,23 @@ async def GetUserBuckets(email: str) -> dict:
         if user is None:
             return {"message": "User does not exist.", "success": False, "buckets": []}
 
-        bucket_names = get_user_bucket_names(sql, user[0])
-        return {"message": "Buckets fetched successfully.", "success": True, "buckets": bucket_names}
+        bucket_records = get_user_bucket_records(sql, user[0])
+        return {
+            "message": "Buckets fetched successfully.",
+            "success": True,
+            "buckets": bucket_records,
+        }
     finally:
         sql.close()
 
+class RenameBucket(BaseModel):
+    email: str
+    current_bucket_name: str
+    new_bucket_name: str
 
 @app.post("/rename-bucket", tags=["rename-bucket"])
 async def RenameBucketAPI(renameBucket: RenameBucket) -> dict:
     sql = sql_py.SQL()
-    created_new_bucket = False
     new_bucket_name = ""
     try:
         if not sql.check_if_table_exists("users"):
@@ -367,9 +428,11 @@ async def RenameBucketAPI(renameBucket: RenameBucket) -> dict:
                 "message": "Bucket does not belong to the current user.",
                 "success": False,
             }
+            
+        
 
-        if sql.check_data_exists("user_buckets", "bucket_name", new_bucket_name):
-            return {"message": "Bucket name already exists.", "success": False}
+        # if sql.check_data_exists("user_buckets", "bucket_name", new_bucket_name):
+        #     return {"message": "Bucket name already exists.", "success": False}
 
         # if not minio_client.bucket_exists(current_bucket_name):
         #     return {
@@ -416,6 +479,82 @@ async def RenameBucketAPI(renameBucket: RenameBucket) -> dict:
     #     return {"message": f"Failed to rename bucket: {exc}", "success": False}
     finally:
         sql.close()
+        
+    
+class DeleteBucket(BaseModel):
+    email: str
+    current_bucket_name: str
+
+    
+@app.post("/delete-bucket", tags=["delete-bucket"])
+async def DeleteBucketAPi(deletebucket: DeleteBucket) -> dict:
+    sql = sql_py.SQL()
+
+    print(f"email: {deletebucket.email}")
+    print(f"current_bucket_name: {deletebucket.current_bucket_name}")
+
+    try:
+        if not sql.check_if_table_exists("users"):
+            return {"message": "Users table doesn't exist.", "success": False}
+        if not sql.check_if_table_exists("user_buckets"):
+            return {"message": "No buckets found for user.", "success": False}
+
+        user = sql.get_data("users", USER_COLUMNS, "email", deletebucket.email)
+        if user is None:
+            return {"message": "User does not exist.", "success": False}
+
+        current_bucket_name = deletebucket.current_bucket_name.strip()
+        bucket_names = get_user_bucket_names(sql, user[0])
+        if current_bucket_name not in bucket_names:
+            return {
+                "message": "Bucket does not belong to the current user.",
+                "success": False,
+            }
+
+        deleted_rows = sql.delete_bucket("user_buckets", user[0], current_bucket_name)
+        if deleted_rows == 0:
+            return {"message": "Bucket could not be deleted.", "success": False}
+
+        # if not minio_client.bucket_exists(current_bucket_name):
+        #     return {
+        #         "message": "Current bucket does not exist in storage.",
+        #         "success": False,
+        #     }
+        # if minio_client.bucket_exists(new_bucket_name):
+        #     return {"message": "Bucket name already exists in storage.", "success": False}
+
+        # minio_client.make_bucket(new_bucket_name)
+        # created_new_bucket = True
+        # copy_bucket_objects(current_bucket_name, new_bucket_name)
+        # remove_bucket_objects(current_bucket_name)
+        # minio_client.remove_bucket(current_bucket_name)
+
+
+    except ValueError as exc:
+        return {"message": str(exc), "success": False}
+    # except Exception as exc:
+    #     if created_new_bucket and new_bucket_name:
+    #         try:
+    #             cleanup_bucket(new_bucket_name)
+    #         except Exception as cleanup_error:
+    #             print(
+    #                 "Failed to clean up renamed bucket",
+    #                 new_bucket_name,
+    #                 cleanup_error,
+    #             )
+    #     print(f"Error renaming bucket: {exc}")
+    #     return {"message": f"Failed to rename bucket: {exc}", "success": False}
+    finally:
+        sql.close()
+
+    return {
+        "message": "Bucket deleted successfully.",
+        "success": True,
+        "bucket_name": current_bucket_name,
+        "user_uuid": user[0],
+    }
+
+
 
 # @app.get("/buckets", tags=["buckets"])
 # async def GetBuckets() -> dict:

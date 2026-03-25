@@ -1,4 +1,4 @@
-import type { BucketRecord } from "./types";
+import type { BucketRecord, BucketSummary } from "./types";
 
 const fallbackBucketProfiles: Omit<BucketRecord, "name">[] = [
   {
@@ -225,15 +225,15 @@ const fallbackBucketProfiles: Omit<BucketRecord, "name">[] = [
   },
 ];
 
-export function buildBucketRecords(bucketNames: string[]): BucketRecord[] {
-  return bucketNames
+export function buildBucketRecords(bucketSummaries: BucketSummary[]): BucketRecord[] {
+  return bucketSummaries
     .slice()
-    .sort((left, right) => left.localeCompare(right))
-    .map((name, index) => {
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((bucket, index) => {
       const profile = fallbackBucketProfiles[index % fallbackBucketProfiles.length];
       return {
-        name,
-        createdAt: profile.createdAt,
+        name: bucket.name,
+        createdAt: bucket.createdAt || profile.createdAt,
         region: profile.region,
         items: profile.items,
       };

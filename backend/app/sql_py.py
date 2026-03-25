@@ -5,9 +5,9 @@ import sqlite3
 IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 class SQL:
-    def __init__(self):
+    def __init__(self, database: str = "data.db"):
         os.makedirs("database", exist_ok=True)
-        self.con = sqlite3.connect("database/data.db")
+        self.con = sqlite3.connect(os.path.join("database", database))
         self.cursor = self.con.cursor()
 
     def _validate_identifier(self, identifier: str) -> str:
@@ -36,6 +36,20 @@ class SQL:
         self.cursor.execute(
             f"CREATE {unique_clause}INDEX IF NOT EXISTS {validated_index_name} "
             f"ON {validated_table_name}({', '.join(validated_columns)})"
+        )
+        self.con.commit()
+
+    def get_table_columns(self, table_name: str) -> list[str]:
+        validated_table_name = self._validate_identifier(table_name)
+        self.cursor.execute(f"PRAGMA table_info({validated_table_name})")
+        return [row[1] for row in self.cursor.fetchall()]
+
+    def add_column(self, table_name: str, column_name: str, column_type: str):
+        validated_table_name = self._validate_identifier(table_name)
+        validated_column_name = self._validate_identifier(column_name)
+        self.cursor.execute(
+            f"ALTER TABLE {validated_table_name} "
+            f"ADD COLUMN {validated_column_name} {column_type}"
         )
         self.con.commit()
 
@@ -148,7 +162,17 @@ class SQL:
         )
         return True if self.cursor.fetchone() is not None else False
     
-    
+
+    def delete_bucket(self, table_name: str, user_uuid: str, bucket_name: str) -> int:
+        validated_table_name = self._validate_identifier(table_name)
+        print(f"deleting bucket: {bucket_name}")
+        self.cursor.execute(
+            f"DELETE FROM {validated_table_name} WHERE user_uuid = ? AND bucket_name = ?",
+            (user_uuid, bucket_name),
+        )
+        deleted_rows = self.cursor.rowcount
+        self.con.commit()
+        return deleted_rows
 
     def close(self):
         self.con.close()

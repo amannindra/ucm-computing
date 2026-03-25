@@ -1,4 +1,5 @@
 import axios from "axios";
+import type { BucketSummary } from "./types";
 
 const BASE_URL =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ||
@@ -19,7 +20,7 @@ const getRequestErrorMessage = (error: unknown, fallbackMessage: string) => {
 export type BucketListResponse = {
   success: boolean;
   message: string;
-  buckets: string[];
+  buckets: BucketSummary[];
 };
 
 export type BucketMutationResponse = {
@@ -31,11 +32,22 @@ export type BucketMutationResponse = {
 };
 
 export const getUserBuckets = async (email: string): Promise<BucketListResponse> => {
+  console.log("getUserBuckets is called, email: ", email);
   try {
-    const response = await axios.get(`${BASE_URL}/user-buckets`, {
+    const response = await axios.get(`${BASE_URL}/get-user-buckets`, {
       params: { email },
     });
-    return response.data as BucketListResponse;
+    const buckets = Array.isArray(response.data?.buckets)
+      ? response.data.buckets.map((bucket: { name?: string; created_at?: string }) => ({
+          name: bucket.name ?? "",
+          createdAt: bucket.created_at ?? "",
+        }))
+      : [];
+    return {
+      success: Boolean(response.data?.success),
+      message: String(response.data?.message ?? "Buckets fetched successfully."),
+      buckets,
+    };
   } catch (error) {
     console.error("Error fetching user buckets", error);
     return {
@@ -78,6 +90,27 @@ export const renameBucket = async (
     return {
       success: false,
       message: getRequestErrorMessage(error, "Failed to rename bucket."),
+    };
+  }
+};
+
+
+export const deleteBucket = async (
+  email: string,
+  currentBucketName: string,
+): Promise<BucketMutationResponse> => {
+  try {
+    const response = await axios.post(`${BASE_URL}/delete-bucket`, {
+      email,
+      current_bucket_name: currentBucketName,
+    });
+    return response.data as BucketMutationResponse;
+  }
+  catch (error) {
+    console.error("Error deleting bucket", error);
+    return {
+      success: false,
+      message: getRequestErrorMessage(error, "Failed to delete bucket."),
     };
   }
 };

@@ -32,7 +32,7 @@ echo "Updating Pip"
 pip3 install --upgrade pip
 
 echo "Installing dependencies"
-pip3 install -r requirements.txt
+pip3 install --no-cache-dir -r requirements.txt
 
 
 
