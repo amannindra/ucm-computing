@@ -35,37 +35,37 @@ BUCKET_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$")
 
 database_db = "data.db"
 
-def resolve_minio_endpoint(raw_endpoint: str | None) -> tuple[str, bool]:
-    endpoint = (raw_endpoint or "127.0.0.1:9000").strip()
-    secure_override = os.getenv("MINIO_SECURE")
-    secure = (
-        secure_override.strip().lower() in {"1", "true", "yes", "on"}
-        if secure_override
-        else False
-    )
+# def resolve_minio_endpoint(raw_endpoint: str | None) -> tuple[str, bool]:
+#     endpoint = (raw_endpoint or "127.0.0.1:9000").strip()
+#     secure_override = os.getenv("MINIO_SECURE")
+#     secure = (
+#         secure_override.strip().lower() in {"1", "true", "yes", "on"}
+#         if secure_override
+#         else False
+#     )
 
-    if "://" in endpoint:
-        parsed_endpoint = urlsplit(endpoint)
-        endpoint = parsed_endpoint.netloc or parsed_endpoint.path
-        if secure_override is None:
-            secure = parsed_endpoint.scheme == "https"
-        if parsed_endpoint.path not in {"", "/"}:
-            print(
-                f"MINIO_ENDPOINT contains path '{parsed_endpoint.path}'. "
-                f"Using '{endpoint}' instead."
-            )
+#     if "://" in endpoint:
+#         parsed_endpoint = urlsplit(endpoint)
+#         endpoint = parsed_endpoint.netloc or parsed_endpoint.path
+#         if secure_override is None:
+#             secure = parsed_endpoint.scheme == "https"
+#         if parsed_endpoint.path not in {"", "/"}:
+#             print(
+#                 f"MINIO_ENDPOINT contains path '{parsed_endpoint.path}'. "
+#                 f"Using '{endpoint}' instead."
+#             )
 
-    endpoint = endpoint.rstrip("/")
-    return endpoint, secure
+#     endpoint = endpoint.rstrip("/")
+#     return endpoint, secure
 
 
-MINIO_ENDPOINT, MINIO_SECURE = resolve_minio_endpoint(os.getenv("MINIO_ENDPOINT"))
-minio_client = Minio(
-    endpoint=MINIO_ENDPOINT,
-    access_key=os.getenv("MINIO_ACCESS_KEY"),
-    secret_key=os.getenv("MINIO_SECRET_KEY"),
-    secure=MINIO_SECURE,
-)
+# MINIO_ENDPOINT, MINIO_SECURE = resolve_minio_endpoint(os.getenv("MINIO_ENDPOINT"))
+# minio_client = Minio(
+#     endpoint=MINIO_ENDPOINT,
+#     access_key=os.getenv("MINIO_ACCESS_KEY"),
+#     secret_key=os.getenv("MINIO_SECRET_KEY"),
+#     secure=MINIO_SECURE,
+# )
 
 def normalize_api_path(path: str | None, default_path: str) -> str:
     resolved_path = (path or default_path).strip()
@@ -274,6 +274,7 @@ def normalize_bucket_name(bucket_name: str) -> str:
 def get_user_bucket_names(sql: sql_py.SQL, user_uuid: str) -> list[str]:
     bucket_rows = sql.get_rows("user_buckets", ["bucket_name"], "user_uuid", user_uuid)
     return [row[0] for row in bucket_rows]
+
 
 
 def get_user_bucket_records(sql: sql_py.SQL, user_uuid: str) -> list[dict[str, str]]:
